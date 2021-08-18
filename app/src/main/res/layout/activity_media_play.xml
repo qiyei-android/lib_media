@@ -4,13 +4,18 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".ui.activity.MainActivity">
+    tools:context=".ui.activity.MediaPlayActivity">
 
-    <FrameLayout
-        android:id="@+id/content_layout"
+    <Button
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        tools:ignore="MissingConstraints" />
+        android:layout_height="wrap_content"
+        android:id="@+id/btn"
+        android:text="mp3播放"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        />
+
 
 </androidx.constraintlayout.widget.ConstraintLayout>
