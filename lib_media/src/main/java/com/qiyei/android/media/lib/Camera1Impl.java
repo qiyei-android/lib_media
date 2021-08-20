@@ -1,9 +1,11 @@
 package com.qiyei.android.media.lib;
 
 import android.content.res.Configuration;
+import android.graphics.ImageFormat;
 import android.hardware.Camera;
 import android.media.MediaCodec;
 import android.media.MediaFormat;
+import android.util.Log;
 import android.view.SurfaceHolder;
 
 import androidx.annotation.NonNull;
@@ -48,6 +50,8 @@ public class Camera1Impl implements ICameraApi {
     private int mPreviewRotation = 90;
     private int mPreviewOrientation = Configuration.ORIENTATION_PORTRAIT;
     private int mLastWindowRotateDeg;
+
+    //触摸散光灯开关？
     private final boolean mIsTorchOn = false;
 
     //旋转角度？
@@ -55,9 +59,11 @@ public class Camera1Impl implements ICameraApi {
 
     private int cameraOrientation;
 
-    private final MutableLiveData<Integer> mWorkingStatusLiveData = new MutableLiveData<>(HardwareStatus.DEFAULT);
+    private final MutableLiveData<Integer> mStatusLiveData = new MutableLiveData<>(HardwareStatus.DEFAULT);
 
     private int mCameraId;
+
+    private WeakReference<SurfaceHolder> mSurfaceHolderRef;
 
     public Camera1Impl() {
 
@@ -65,32 +71,43 @@ public class Camera1Impl implements ICameraApi {
 
     @Override
     public boolean open() {
-        return false;
+        return open(false);
     }
 
     @Override
     public boolean close() {
-        return false;
+        stop();
+        if (mCamera != null){
+            mCamera.release();
+            mCamera = null;
+        }
+        mStatusLiveData.postValue(HardwareStatus.CLOSE);
+        return true;
     }
 
     @Override
     public boolean start() {
-        return false;
+        return start(false);
     }
 
     @Override
     public boolean stop() {
-        return false;
+        if (mCamera != null){
+            mCamera.stopPreview();
+            mCamera.setPreviewCallbackWithBuffer(null);
+        }
+        mStatusLiveData.postValue(HardwareStatus.IDLE);
+        return true;
     }
 
     @Override
     public void setCameraId(int id) {
-
+        mCameraId = id;
     }
 
     @Override
     public LiveData<Integer> getStatusLiveData() {
-        return mWorkingStatusLiveData;
+        return mStatusLiveData;
     }
 
     @Override
@@ -99,9 +116,35 @@ public class Camera1Impl implements ICameraApi {
             throw new IllegalStateException("请调用open方法提前打开摄像头!");
         }
 
-        Camera.Parameters parameters = mCamera.getParameters();
-        mPreviewWidth =
+        mLastWindowRotateDeg = windowRotateDeg;
+        mPreviewOrientation = orientation;
+        Camera.CameraInfo info = new Camera.CameraInfo();
+        Camera.getCameraInfo(mCameraId,info);
 
+        rotateDeg = windowRotateDeg;
+        cameraOrientation = info.orientation;
+
+        if (orientation == Configuration.ORIENTATION_PORTRAIT) {
+            if (info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
+                mPreviewRotation = info.orientation % 360;
+                mPreviewRotation = (360 - mPreviewRotation) % 360;  // compensate the mirror
+            } else {
+                mPreviewRotation = (info.orientation + 360) % 360;
+            }
+        } else if (orientation == Configuration.ORIENTATION_LANDSCAPE) {
+            if (info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
+                mPreviewRotation = (info.orientation - 90) % 360;
+                mPreviewRotation = (360 - mPreviewRotation) % 360;  // compensate the mirror
+            } else {
+                mPreviewRotation = (info.orientation + 90) % 360;
+            }
+        }
+
+        if (rotateDeg > 0) {
+            mPreviewRotation = mPreviewRotation % rotateDeg;
+        }
+
+        mCamera.setDisplayOrientation(mPreviewRotation);
     }
 
     @Override
@@ -128,7 +171,7 @@ public class Camera1Impl implements ICameraApi {
 
     @Override
     public void setSurfaceHolderRef(WeakReference<SurfaceHolder> surfaceHolderRef) {
-
+        mSurfaceHolderRef = surfaceHolderRef;
     }
 
     @Override
@@ -195,9 +238,162 @@ public class Camera1Impl implements ICameraApi {
         start(true);
     }
 
-    @Override
-    public void release() {
 
+    private boolean open(boolean force){
+        if (!force){
+            if (isOpened()){
+                Log.e(TAG, "摄像头 处于打开状态不允许重复打开!");
+                return false;
+            }
+        }
+
+        boolean result = false;
+
+        try {
+            mCamera = allocCamera();
+            Camera camera = mCamera;
+            Camera.Parameters parameters = camera.getParameters();
+            parameters.setPictureSize(mPreviewWidth,mPreviewHeight);
+            //int[] range = CameraUtils.determineMaximumSupportedFrameRate(params);
+            int[] range = new int[]{25,120};
+            parameters.setPreviewFpsRange(range[0],range[1]);
+            parameters.setPictureFormat(ImageFormat.NV21);
+            parameters.setFlashMode(Camera.Parameters.FLASH_MODE_OFF);
+            parameters.setWhiteBalance(Camera.Parameters.WHITE_BALANCE_AUTO);
+            parameters.setSceneMode(Camera.Parameters.SCENE_MODE_AUTO);
+            parameters.setRecordingHint(true);
+
+            //对焦模式
+            List<String> supportedFocusModes = parameters.getSupportedFocusModes();
+            if (supportedFocusModes != null && !supportedFocusModes.isEmpty()) {
+                if (supportedFocusModes.contains(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE)) {
+                    parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);
+                } else if (supportedFocusModes.contains(Camera.Parameters.FOCUS_MODE_AUTO)) {
+                    parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_AUTO);
+                } else {
+                    parameters.setFocusMode(supportedFocusModes.get(0));
+                }
+            }
+
+            List<String> supportedFlashModes = parameters.getSupportedFlashModes();
+            if (supportedFlashModes != null && !supportedFlashModes.isEmpty()) {
+                if (supportedFlashModes.contains(Camera.Parameters.FLASH_MODE_TORCH)) {
+
+                    if (mIsTorchOn) {
+                        parameters.setFlashMode(Camera.Parameters.FLASH_MODE_TORCH);
+                    }
+                } else {
+                    parameters.setFlashMode(supportedFlashModes.get(0));
+                }
+            }
+
+            camera.setParameters(parameters);
+
+            mStatusLiveData.setValue(HardwareStatus.OPEN);
+            result = mCamera != null;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return result;
+    }
+
+    private boolean isOpened(){
+        return mStatusLiveData.getValue() == HardwareStatus.OPEN;
+    }
+
+    private boolean isRunning(){
+        return mStatusLiveData.getValue() == HardwareStatus.RUNNING;
+    }
+
+    private boolean isClosed(){
+        return mStatusLiveData.getValue() == HardwareStatus.CLOSE;
+    }
+
+    private boolean isIdle(){
+        return mStatusLiveData.getValue() == HardwareStatus.IDLE;
+    }
+
+
+    /**
+     * 分配Camera
+     * @return
+     */
+    private Camera allocCamera() throws Exception{
+        if (mCameraId < 0){
+            mCameraId = getEnableCameraId();
+        }
+
+        Camera camera = Camera.open(mCameraId);
+        camera.setErrorCallback(new Camera.ErrorCallback() {
+            @Override
+            public void onError(int error, Camera camera) {
+                Log.e(TAG, "allocCamera: 错误回调状态码：" + error);
+                close();
+                open();
+            }
+        });
+        return camera;
+    }
+
+    private int getEnableCameraId(){
+        int id;
+        Camera.CameraInfo info = new Camera.CameraInfo();
+        int num = Camera.getNumberOfCameras();
+        int frontId = -1;
+        int backId = -1;
+        for (int i = 0;i < num ;i++){
+            Camera.getCameraInfo(i,info);
+            if (info.facing == Camera.CameraInfo.CAMERA_FACING_BACK){
+                backId = i;
+            } else if (info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT){
+                frontId = i;
+            }
+        }
+
+        if (frontId != -1){
+            id = frontId;
+        } else if (backId != -1){
+            id = backId;
+        } else {
+            id = 0;
+        }
+
+        return id;
+    }
+
+    private boolean start(boolean force){
+        if (!force) {
+            if (isRunning()) {
+                Log.e(TAG, "当前处于忙碌状态不允许重复预览!");
+                return false;
+            }
+        }
+
+        if (mCamera == null) {
+            throw new IllegalStateException("请调用open方法提前打开摄像头!");
+        }
+
+        try {
+            if (mSurfaceHolderRef != null){
+                mCamera.setPreviewDisplay(mSurfaceHolderRef.get());
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        mCamera.startPreview();
+
+        int previewFormat = mCamera.getParameters().getPreviewFormat();
+        mPreviewSize = mCamera.getParameters().getPreviewSize();
+        mCurrentPreviewCallbackBufferSize = mPreviewSize.width * mPreviewSize.height *3 / 2;
+
+        int size = mPreviewSize.width * mPreviewSize.height * ImageFormat.getBitsPerPixel(previewFormat) >> 3;
+        mCamera.addCallbackBuffer(new byte[size]);
+        mCamera.setPreviewCallbackWithBuffer(mInnerPreviewCallback);
+
+        mStatusLiveData.postValue(HardwareStatus.RUNNING);
+        return true;
     }
 
 

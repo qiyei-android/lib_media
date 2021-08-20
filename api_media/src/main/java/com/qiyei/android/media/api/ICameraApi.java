@@ -63,6 +63,4 @@ public interface ICameraApi {
     int getWindowDegree();
 
     void switchCamera();
-
-    void release();
 }
