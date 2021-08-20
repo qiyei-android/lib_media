@@ -150,9 +150,4 @@ public class CameraXImpl implements ICameraApi {
     public void switchCamera() {
 
     }
-
-    @Override
-    public void release() {
-
-    }
 }
