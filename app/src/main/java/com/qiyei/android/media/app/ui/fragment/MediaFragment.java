@@ -6,6 +6,7 @@ import android.view.View;
 
 import com.qiyei.android.media.app.R;
 import com.qiyei.android.media.app.entity.MainMenu;
+import com.qiyei.android.media.app.ui.activity.CameraDemoActivity;
 import com.qiyei.android.media.app.ui.activity.MediaPlayActivity;
 import com.qiyei.android.media.app.ui.activity.MediaRecordActivity;
 import com.qiyei.android.media.app.ui.adapter.CommonListAdapter;
@@ -27,8 +28,8 @@ public class MediaFragment extends CommonListFragment<MainMenu> {
      */
     private List<MainMenu> mMenuList = new ArrayList<>();
 
-    private String[] names = new String[]{"测试1 音视频的采集、编码、封包成 mp4 输出","测试2 音频播放"};
-    private Class<?>[] clazzs = new Class[]{MediaRecordActivity.class, MediaPlayActivity.class};
+    private String[] names = new String[]{"测试1 相机使用","测试2 音视频的采集、编码、封包成 mp4 输出","测试3 音频播放"};
+    private Class<?>[] clazzs = new Class[]{CameraDemoActivity.class,MediaRecordActivity.class, MediaPlayActivity.class};
 
 
     public MediaFragment() {

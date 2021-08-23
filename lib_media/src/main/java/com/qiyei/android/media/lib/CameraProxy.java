@@ -22,6 +22,17 @@ public class CameraProxy implements ICameraApi {
     }
 
 
+    public static CameraProxy getInstance(){
+        if (sInstance == null){
+            synchronized (CameraProxy.class){
+                if (sInstance == null){
+                    sInstance = new CameraProxy();
+                }
+            }
+        }
+        return sInstance;
+    }
+
 
     @Override
     public boolean open() {

@@ -12,6 +12,7 @@ import androidx.annotation.NonNull;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 
+import com.qiyei.android.media.api.CameraUtils;
 import com.qiyei.android.media.api.HardwareStatus;
 import com.qiyei.android.media.api.ICameraApi;
 
@@ -254,8 +255,8 @@ public class Camera1Impl implements ICameraApi {
             Camera camera = mCamera;
             Camera.Parameters parameters = camera.getParameters();
             parameters.setPictureSize(mPreviewWidth,mPreviewHeight);
-            //int[] range = CameraUtils.determineMaximumSupportedFrameRate(params);
-            int[] range = new int[]{25,120};
+            int[] range = CameraUtils.determineMaximumSupportedFrameRate(parameters);
+            Log.i(TAG,"range," + range[0] + " " + range[1]);
             parameters.setPreviewFpsRange(range[0],range[1]);
             parameters.setPictureFormat(ImageFormat.NV21);
             parameters.setFlashMode(Camera.Parameters.FLASH_MODE_OFF);
