@@ -22,7 +22,7 @@ import com.qiyei.android.media.lib.CameraProxy;
 
 import java.lang.ref.WeakReference;
 
-public class CameraDemoActivity extends AppCompatActivity {
+public class Camera1DemoActivity extends AppCompatActivity {
 
     private static final String TAG = "CameraDemoActivity";
 
@@ -78,7 +78,7 @@ public class CameraDemoActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_camera_demo);
+        setContentView(R.layout.activity_camera1_demo);
 
         mCameraApi = CameraProxy.getInstance();
         mSurfaceView = findViewById(R.id.surfaceView);
