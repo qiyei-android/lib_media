@@ -16,6 +16,9 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Lib_media">
         <activity
+            android:name=".ui.activity.Camera2DemoActivity"
+            android:exported="true" />
+        <activity
             android:name=".ui.activity.Camera1DemoActivity"
             android:exported="true" />
         <activity

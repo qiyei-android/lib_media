@@ -6,27 +6,27 @@ import android.view.SurfaceHolder;
 
 import androidx.lifecycle.LiveData;
 
-import com.qiyei.android.media.api.ICameraApi;
+import com.qiyei.android.media.api.ICamera1Api;
 
 import java.lang.ref.WeakReference;
 
-public class CameraProxy implements ICameraApi {
+public class Camera1Proxy implements ICamera1Api {
 
-    private volatile static CameraProxy sInstance;
+    private volatile static Camera1Proxy sInstance;
 
     private Camera1Impl mCameraImpl;
 
 
-    private CameraProxy() {
+    private Camera1Proxy() {
         mCameraImpl = new Camera1Impl();
     }
 
 
-    public static CameraProxy getInstance(){
+    public static Camera1Proxy getInstance(){
         if (sInstance == null){
-            synchronized (CameraProxy.class){
+            synchronized (Camera1Proxy.class){
                 if (sInstance == null){
-                    sInstance = new CameraProxy();
+                    sInstance = new Camera1Proxy();
                 }
             }
         }

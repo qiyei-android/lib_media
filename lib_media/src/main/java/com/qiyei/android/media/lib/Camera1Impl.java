@@ -14,14 +14,14 @@ import androidx.lifecycle.MutableLiveData;
 
 import com.qiyei.android.media.api.CameraUtils;
 import com.qiyei.android.media.api.HardwareStatus;
-import com.qiyei.android.media.api.ICameraApi;
+import com.qiyei.android.media.api.ICamera1Api;
 
 import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.util.Collections;
 import java.util.List;
 
-public class Camera1Impl implements ICameraApi {
+public class Camera1Impl implements ICamera1Api {
 
 
     private final static String TAG = "Camera1Impl";

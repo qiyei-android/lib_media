@@ -15,12 +15,12 @@ import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.LiveData;
 
 import com.google.common.util.concurrent.ListenableFuture;
-import com.qiyei.android.media.api.ICameraApi;
+import com.qiyei.android.media.api.ICamera1Api;
 
 import java.lang.ref.WeakReference;
 import java.util.concurrent.ExecutionException;
 
-public class CameraXImpl implements ICameraApi {
+public class CameraXImpl implements ICamera1Api {
 
     private Context mContext;
 

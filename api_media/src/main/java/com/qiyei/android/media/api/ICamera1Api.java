@@ -11,7 +11,7 @@ import java.lang.ref.WeakReference;
 /**
  * 用于定义对外开放的操作摄像头的统一接口
  */
-public interface ICameraApi {
+public interface ICamera1Api {
 
     boolean open();
 

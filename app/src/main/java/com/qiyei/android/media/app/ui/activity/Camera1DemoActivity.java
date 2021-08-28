@@ -16,9 +16,9 @@ import android.view.SurfaceView;
 import android.view.View;
 import android.widget.Toast;
 
-import com.qiyei.android.media.api.ICameraApi;
+import com.qiyei.android.media.api.ICamera1Api;
 import com.qiyei.android.media.app.R;
-import com.qiyei.android.media.lib.CameraProxy;
+import com.qiyei.android.media.lib.Camera1Proxy;
 
 import java.lang.ref.WeakReference;
 
@@ -41,7 +41,7 @@ public class Camera1DemoActivity extends AppCompatActivity {
     private static final int PERMISSIONS_REQUEST_VIDEO = 1;
 
 
-    private ICameraApi mCameraApi;
+    private ICamera1Api mCameraApi;
     private SurfaceView mSurfaceView;
 
     //预览数据回调
@@ -80,7 +80,7 @@ public class Camera1DemoActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_camera1_demo);
 
-        mCameraApi = CameraProxy.getInstance();
+        mCameraApi = Camera1Proxy.getInstance();
         mSurfaceView = findViewById(R.id.surfaceView);
 
         //检查权限申请
