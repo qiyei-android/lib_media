@@ -7,6 +7,7 @@ import android.graphics.SurfaceTexture;
 import android.os.Bundle;
 import android.util.Size;
 import android.view.TextureView;
+import android.view.View;
 
 import com.qiyei.android.media.api.ICamera2Api;
 import com.qiyei.android.media.app.R;
@@ -51,6 +52,14 @@ public class Camera2DemoActivity extends AppCompatActivity {
 
             }
         });
+
+        findViewById(R.id.capture_image_button).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mCamera2Api.takePhoto();
+            }
+        });
+
 
         mCamera2Api.open();
 

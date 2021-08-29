@@ -18,6 +18,8 @@ import android.hardware.camera2.params.SessionConfiguration;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.Image;
 import android.media.ImageReader;
+import android.media.MediaActionSound;
+import android.media.tv.TvView;
 import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -33,19 +35,47 @@ import androidx.core.app.ActivityCompat;
 import com.qiyei.android.media.api.CameraUtils;
 import com.qiyei.android.media.api.ICamera2Api;
 
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingDeque;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
+
+/**
+ * 重构思路
+ * 建立预览 拍照，视频录制等三个controller 分辨建立对应的surface  size imageListener
+ */
 public class Camera2Impl implements ICamera2Api,Handler.Callback {
 
     private static final String TAG = "Camera2Impl";
     private static final int TIME_OUT = 2000;
+
+    private static final int MSG_OPEN_CAMERA = 0x100;
+    private static final int MSG_CLOSE_CAMERA = 0x101;
+
+    private static final int MSG_CREATE_REQUEST_BUILDERS = 0x200;
+
+    private static final int MSG_CREATE_SESSION = 0x300;
+    private static final int MSG_CLOSE_SESSION = 0x301;
+    private static final int MSG_SET_PREVIEW_SIZE = 0x400;
+    private static final int MSG_START_PREVIEW = 0x401;
+    private static final int MSG_STOP_PREVIEW = 0x402;
+    private static final int MSG_SET_IMAGE_SIZE = 0x500;
+    private static final int MSG_CAPTURE_IMAGE = 0x501;
+    private static final int MSG_CAPTURE_IMAGE_BURST = 0x502;
+    private static final int MSG_START_CAPTURE_IMAGE_CONTINUOUSLY = 0x503;
+
+    private static final int MSG_START_RECORD = 0x600;
+    private static final int MSG_STOP_RECORD = 0x601;
+
+
 
     private CameraManager mCameraManager;
 
@@ -71,40 +101,46 @@ public class Camera2Impl implements ICamera2Api,Handler.Callback {
 
     private CameraCaptureSession mCaptureSession;
 
-    private ImageReader mImageReader;
+    //private ImageReader mImageReader;
 
     List<Surface> mSurfaces = new ArrayList<>();
 
 
     private SurfaceTexture mPreviewSurfaceTexture;
 
+    /**
+     * 预览Surface
+     */
     private Surface mPreviewSurface;
+    /**
+     * 预览尺寸
+     */
+    private Size mPreviewSize = new Size(640,960);
 
-    //private Surface mImageSurface;
+    /**
+     * 拍照Surface
+     */
+    private Surface mImageSurface;
 
-    private Size mDefaultPreviewSize = new Size(640,960);
+    /**
+     * 拍照尺寸
+     */
+    private Size mImageSize = new Size(1080,1920);
 
-    private Size mDefaultImageSize = new Size(1080,1920);
+    /**
+     * 设备方向监听
+     */
+    private DeviceOrientationListener mDeviceOrientationListener;
 
+    /**
+     * 快门声音
+     */
+    private MediaActionSound mMediaActionSound;
 
-    private static final int MSG_OPEN_CAMERA = 0x100;
-    private static final int MSG_CLOSE_CAMERA = 0x101;
-
-    private static final int MSG_CREATE_REQUEST_BUILDERS = 0x200;
-
-    private static final int MSG_CREATE_SESSION = 0x300;
-    private static final int MSG_CLOSE_SESSION = 0x301;
-    private static final int MSG_SET_PREVIEW_SIZE = 0x400;
-    private static final int MSG_START_PREVIEW = 0x401;
-    private static final int MSG_STOP_PREVIEW = 0x402;
-    private static final int MSG_SET_IMAGE_SIZE = 0x500;
-    private static final int MSG_CAPTURE_IMAGE = 0x501;
-    private static final int MSG_CAPTURE_IMAGE_BURST = 0x502;
-    private static final int MSG_START_CAPTURE_IMAGE_CONTINUOUSLY = 0x503;
-
-    private static final int MSG_START_RECORD = 0x600;
-    private static final int MSG_STOP_RECORD = 0x601;
-
+    /**
+     * 捕获阻塞队列
+     */
+    private BlockingQueue<CaptureResult> mCaptureBlockingQueue = new LinkedBlockingDeque<>();
 
     private CameraDevice.StateCallback mDeviceStateCallback = new CameraDevice.StateCallback() {
         @Override
@@ -151,19 +187,51 @@ public class Camera2Impl implements ICamera2Api,Handler.Callback {
         }
     };
 
-    private ImageReader.OnImageAvailableListener mImageAvailableListener = new ImageReader.OnImageAvailableListener() {
+    private ImageReader.OnImageAvailableListener mPreviewImageAvailableListener = new ImageReader.OnImageAvailableListener() {
         @Override
         public void onImageAvailable(ImageReader reader) {
             Image image = reader.acquireNextImage();
 //            mBuffer = convertYUV420888ToNv21(image);
 //            if (mFrameCallback != null) {
-            Log.i(TAG, "##### mImageAvailableListener onImageAvailable: " + image.getPlanes());
+            Log.i(TAG, "##### PreviewImageAvailableListener onImageAvailable: " + image.getPlanes());
 //                mFrameCallback.onFrame(image);
 //            }
             image.close();
         }
     };
 
+    private ImageReader.OnImageAvailableListener mCaptureImageAvailableListener = new ImageReader.OnImageAvailableListener() {
+        @Override
+        public void onImageAvailable(ImageReader reader) {
+            try(Image image = reader.acquireNextImage()) {
+                // TODO: 2021/8/29 bugfix
+//                CaptureResult captureResult = mCaptureBlockingQueue.take();
+//                ByteBuffer buffer = null;
+//                if (image != null && captureResult != null) {
+//                    // Jpeg image data only occupy the planes[0].
+//                    buffer = image.getPlanes()[0].getBuffer();
+//                    int length = buffer.remaining();
+//                    //buffer.get()
+//                    CameraUtils.writeToMediaStore(TAG,mContext,captureResult,buffer.array(),image.getWidth(),image.getHeight());
+//                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    };
+
+    private ImageReader.OnImageAvailableListener mRecordImageAvailableListener = new ImageReader.OnImageAvailableListener() {
+        @Override
+        public void onImageAvailable(ImageReader reader) {
+            Image image = reader.acquireNextImage();
+//            mBuffer = convertYUV420888ToNv21(image);
+//            if (mFrameCallback != null) {
+            Log.i(TAG, "##### RecordImageAvailableListener onImageAvailable: " + image.getPlanes());
+//                mFrameCallback.onFrame(image);
+//            }
+            image.close();
+        }
+    };
 
     public Camera2Impl(Context context) {
         mContext = context;
@@ -173,6 +241,10 @@ public class Camera2Impl implements ICamera2Api,Handler.Callback {
         mCameraHandler = new Handler(mCameraThread.getLooper(),this);
 
         mCameraMap = new HashMap<>();
+        mDeviceOrientationListener = new DeviceOrientationListener(mContext);
+        mDeviceOrientationListener.enable();
+        mMediaActionSound = new MediaActionSound();
+
         initCamera();
     }
 
@@ -257,6 +329,7 @@ public class Camera2Impl implements ICamera2Api,Handler.Callback {
     @Override
     public void close() {
         sendMessage(MSG_CLOSE_CAMERA,null);
+        mDeviceOrientationListener.disable();
     }
 
     @Override
@@ -290,6 +363,10 @@ public class Camera2Impl implements ICamera2Api,Handler.Callback {
         sendMessage(MSG_STOP_PREVIEW,null);
     }
 
+    @Override
+    public void takePhoto() {
+        sendMessage(MSG_CAPTURE_IMAGE,null);
+    }
 
     private boolean initCamera() {
         mCameraMap.clear();
@@ -356,6 +433,9 @@ public class Camera2Impl implements ICamera2Api,Handler.Callback {
             mCameraInfo = mCameraMap.get(CameraCharacteristics.LENS_FACING_BACK);
         }
 
+        //初始化surface
+
+
         if (mCameraMap.size() != 0 && mCameraInfo != null) {
             return true;
         } else {
@@ -393,10 +473,10 @@ public class Camera2Impl implements ICamera2Api,Handler.Callback {
             mCameraDevice.close();
             mCameraDevice = null;
         }
-        if (mImageReader != null) {
-            mImageReader.close();
-            mImageReader = null;
-        }
+//        if (mImageReader != null) {
+//            mImageReader.close();
+//            mImageReader = null;
+//        }
         Log.e(TAG, "camera close ");
     }
 
@@ -405,16 +485,25 @@ public class Camera2Impl implements ICamera2Api,Handler.Callback {
             Log.e(TAG, "createSession error cameraInfo is null");
             return;
         }
+        if (mCameraDevice == null){
+            Log.e(TAG, "createSession error mCameraDevice is null");
+            return;
+        }
         Range<Integer>[] fpsRanges = mCameraInfo.characteristics.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES);
         Log.i(TAG, "createSessionInner fpsRanges=" + Arrays.toString(fpsRanges));
 
         List<Surface> surfaceList = new ArrayList<>();
-        if (mImageReader != null){
-            surfaceList.add(mImageReader.getSurface());
+
+        if (mPreviewSurfaceTexture != null && mPreviewSurface != null){
+
+            ImageReader imageReader = buildImageLoader(mPreviewImageAvailableListener, mPreviewSize.getWidth(),
+                    mPreviewSize.getHeight(),ImageFormat.YUV_420_888,1);
+            surfaceList.add(imageReader.getSurface());
+            surfaceList.add(mPreviewSurface);
         }
 
-        if (mPreviewSurface != null){
-            surfaceList.add(mPreviewSurface);
+        if (mImageSurface != null){
+            surfaceList.add(mImageSurface);
         }
 
         if (mSurfaces != null && mSurfaces.size() != 0){
@@ -455,8 +544,9 @@ public class Camera2Impl implements ICamera2Api,Handler.Callback {
         if (mCameraInfo != null){
             Size previewSize = CameraUtils.getOptimalSize(mCameraInfo.map,SurfaceTexture.class,maxWidth,maxHeight);
             if (previewSize == null){
-                previewSize = mDefaultPreviewSize;
+                previewSize = mPreviewSize;
             }
+            mPreviewSize = previewSize;
             if (mPreviewSurfaceTexture != null){
                 mPreviewSurfaceTexture.setDefaultBufferSize(previewSize.getWidth(), previewSize.getHeight());
                 mPreviewSurface = new Surface(mPreviewSurfaceTexture);
@@ -471,7 +561,8 @@ public class Camera2Impl implements ICamera2Api,Handler.Callback {
         }
 
         if (mCameraInfo.map.isOutputSupportedFor(format)){
-            mImageReader = buildImageLoader(width,height,format,maxImages);
+            ImageReader imageReader = buildImageLoader(mCaptureImageAvailableListener,width,height,format,maxImages);
+            mImageSurface = imageReader.getSurface();
         } else {
             Log.w(TAG,"mCameraInfo id=" + mCameraInfo.cameraId + " not support format=" + format);
         }
@@ -498,9 +589,9 @@ public class Camera2Impl implements ICamera2Api,Handler.Callback {
             mPreviewRequestBuilder.addTarget(mPreviewSurface);
         }
 
-        if (mImageReader != null){
-            mCaptureRequestBuilder.addTarget(mImageReader.getSurface());
-            mPreviewRequestBuilder.addTarget(mImageReader.getSurface());
+        if (mImageSurface != null){
+            mCaptureRequestBuilder.addTarget(mImageSurface);
+            mPreviewRequestBuilder.addTarget(mImageSurface);
         }
 
         try {
@@ -561,22 +652,44 @@ public class Camera2Impl implements ICamera2Api,Handler.Callback {
             return;
         }
 
-//        val deviceOrientation = deviceOrientationListener.orientation;
-//        val jpegOrientation = getJpegOrientation(cameraCharacteristics, deviceOrientation);
-//        captureImageRequestBuilder[CaptureRequest.JPEG_ORIENTATION] = jpegOrientation;
-//
-//        // Configure the location information.
-//        val location = getLocation();
-//        captureImageRequestBuilder[CaptureRequest.JPEG_GPS_LOCATION] = location;
-//
-//        // Configure the image quality.
-//        captureImageRequestBuilder[CaptureRequest.JPEG_QUALITY] = 100;
-//
-//        // Add the target surface to receive the jpeg image data.
-//        captureImageRequestBuilder.addTarget(jpegSurface);
-//
-//        val captureImageRequest = captureImageRequestBuilder.build();
-//        captureSession.capture(captureImageRequest, CaptureImageStateCallback(), mainHandler);
+        int deviceOrientation = mDeviceOrientationListener.getOrientation();
+
+        int jpegOrientation = CameraUtils.getImageOrientation(mCameraInfo.characteristics,deviceOrientation);
+
+        //设置角度
+        mCaptureRequestBuilder.set(CaptureRequest.JPEG_ORIENTATION,jpegOrientation);
+
+        // Configure the location information.
+        mCaptureRequestBuilder.set(CaptureRequest.JPEG_GPS_LOCATION,CameraUtils.getLocation(mContext));
+
+        // Configure the image quality.
+        mCaptureRequestBuilder.set(CaptureRequest.JPEG_QUALITY,Byte.valueOf("100"));
+        // Add the target surface to receive the jpeg image data.
+        mCaptureRequestBuilder.addTarget(mImageSurface);
+
+        try {
+            mCaptureSession.capture(mCaptureRequestBuilder.build(), new CameraCaptureSession.CaptureCallback() {
+                @Override
+                public void onCaptureStarted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, long timestamp, long frameNumber) {
+                    super.onCaptureStarted(session, request, timestamp, frameNumber);
+                    mMediaActionSound.play(MediaActionSound.SHUTTER_CLICK);
+                }
+
+                @Override
+                public void onCaptureCompleted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull TotalCaptureResult result) {
+                    super.onCaptureCompleted(session, request, result);
+
+                    try {
+                        mCaptureBlockingQueue.put(result);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+
+                }
+            }, mCameraHandler);
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
     }
 
 
@@ -591,12 +704,12 @@ public class Camera2Impl implements ICamera2Api,Handler.Callback {
         Log.i(TAG,"sendMessage what=0x" + String.format("%03x",what));
     }
 
-    private ImageReader buildImageLoader(int width,int height,int format,int maxImages) {
+    private ImageReader buildImageLoader(ImageReader.OnImageAvailableListener listener,int width, int height, int format, int maxImages) {
         StringBuilder builder = new StringBuilder();
         builder.append("width=").append(width).append(" height=").append(height).append(" format=").append(format).append(" maxImages=").append(maxImages);
         Log.i(TAG, "buildImageLoader:" + builder.toString());
         ImageReader imageReader = ImageReader.newInstance(width, height, format, maxImages);
-        imageReader.setOnImageAvailableListener(mImageAvailableListener, mCameraHandler);
+        imageReader.setOnImageAvailableListener(listener, mCameraHandler);
         return imageReader;
     }
 }

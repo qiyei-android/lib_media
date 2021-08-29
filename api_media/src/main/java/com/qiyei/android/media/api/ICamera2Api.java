@@ -23,6 +23,6 @@ public interface ICamera2Api {
 
     void stopPreview();
 
-
+    void takePhoto();
 
 }
