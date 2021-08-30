@@ -172,14 +172,18 @@ public class CameraUtils {
         String path = cameraDir + File.separator + displayName;
         int orientation = captureResult.get(CaptureResult.JPEG_ORIENTATION);
         Location location = captureResult.get(CaptureResult.JPEG_GPS_LOCATION);
-        double longitude = location.getLongitude();
-        double latitude = location.getLatitude();
+        double longitude = 0;
+        double latitude = 0;
+        if (location != null){
+            longitude = location.getLongitude();
+            latitude = location.getLatitude();
+        }
 
         // Write the jpeg data into the specified file.
         try (FileOutputStream fs = new FileOutputStream(path)) {
 
             fs.write(buffer);
-
+            Log.i(tag,"write MediaStore successful,path=" + path);
             // Insert the image information into the media store.
             ContentValues values = new ContentValues();
             values.put(MediaStore.Images.ImageColumns.TITLE, title);

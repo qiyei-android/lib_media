@@ -34,6 +34,8 @@ public class Camera2DemoActivity extends AppCompatActivity {
 
                 mCamera2Api.setImageSize(size);
 
+                mCamera2Api.setRecordSize(size);
+
                 mCamera2Api.createSession();
             }
 
@@ -62,15 +64,18 @@ public class Camera2DemoActivity extends AppCompatActivity {
 
 
         mCamera2Api.open();
-
+        mCamera2Api.setSessionListener(new ICamera2Api.CameraCaptureSessionListener() {
+            @Override
+            public void onAvailable() {
+                mCamera2Api.startPreview();
+                mCamera2Api.startRecord();
+            }
+        });
     }
 
     @Override
     protected void onStart() {
         super.onStart();
-        //mCamera2Api.createSession();
-
-        mCamera2Api.startPreview();
     }
 
     @Override

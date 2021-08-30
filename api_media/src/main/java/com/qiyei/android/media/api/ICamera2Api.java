@@ -15,9 +15,11 @@ public interface ICamera2Api {
 
     void setImageSize(Size size);
 
+    void setRecordSize(Size size);
+
     void createSession();
 
-    //void setSessionListener(SurfaceTexture texture);
+    void setSessionListener(CameraCaptureSessionListener listener);
 
     void startPreview();
 
@@ -25,4 +27,9 @@ public interface ICamera2Api {
 
     void takePhoto();
 
+    void startRecord();
+
+    interface CameraCaptureSessionListener {
+        void onAvailable();
+    }
 }

@@ -3,26 +3,18 @@ package com.qiyei.android.media.lib.camera.camera2;
 import android.Manifest;
 import android.content.Context;
 import android.content.pm.PackageManager;
-import android.graphics.ImageFormat;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
-import android.hardware.camera2.CaptureRequest;
-import android.hardware.camera2.CaptureResult;
-import android.hardware.camera2.TotalCaptureResult;
 import android.hardware.camera2.params.OutputConfiguration;
 import android.hardware.camera2.params.SessionConfiguration;
 import android.hardware.camera2.params.StreamConfigurationMap;
-import android.media.Image;
-import android.media.ImageReader;
-import android.media.MediaActionSound;
-import android.media.tv.TvView;
 import android.os.Build;
 import android.os.Handler;
-import android.os.HandlerThread;
+import android.os.Looper;
 import android.os.Message;
 import android.util.Log;
 import android.util.Range;
@@ -32,18 +24,14 @@ import android.view.Surface;
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 
-import com.qiyei.android.media.api.CameraUtils;
 import com.qiyei.android.media.api.ICamera2Api;
 
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingDeque;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
@@ -75,86 +63,50 @@ public class Camera2Impl implements ICamera2Api,Handler.Callback {
     private static final int MSG_START_RECORD = 0x600;
     private static final int MSG_STOP_RECORD = 0x601;
 
+    private Context mContext;
 
-
+    /**
+     * 相机管理器
+     */
     private CameraManager mCameraManager;
 
     /**
-     * 相机线程
+     * Handler
      */
-    private HandlerThread mCameraThread;
-    /**
-     * 相机Handler
-     */
-    private Handler mCameraHandler;
-
-    private Context mContext;
+    private Handler mHandler;
 
     private Map<String, CameraInfo> mCameraMap;
-
+    /**
+     * 相机信息封装
+     */
     private CameraInfo mCameraInfo;
-
+    /**
+     * 相机设备
+     */
     private CameraDevice mCameraDevice;
 
-    private CaptureRequest.Builder mCaptureRequestBuilder;
-    private CaptureRequest.Builder mPreviewRequestBuilder;
-
+    /**
+     * 相机会话
+     */
     private CameraCaptureSession mCaptureSession;
 
-    //private ImageReader mImageReader;
+    private CameraCaptureSessionListener mSessionListener;
 
-    List<Surface> mSurfaces = new ArrayList<>();
+    private CameraPreviewController mCameraPreviewController;
 
+    private CameraImageController mCameraImageController;
 
-    private SurfaceTexture mPreviewSurfaceTexture;
-
-    /**
-     * 预览Surface
-     */
-    private Surface mPreviewSurface;
-    /**
-     * 预览尺寸
-     */
-    private Size mPreviewSize = new Size(640,960);
-
-    /**
-     * 拍照Surface
-     */
-    private Surface mImageSurface;
-
-    /**
-     * 拍照尺寸
-     */
-    private Size mImageSize = new Size(1080,1920);
-
-    /**
-     * 设备方向监听
-     */
-    private DeviceOrientationListener mDeviceOrientationListener;
-
-    /**
-     * 快门声音
-     */
-    private MediaActionSound mMediaActionSound;
-
-    /**
-     * 捕获阻塞队列
-     */
-    private BlockingQueue<CaptureResult> mCaptureBlockingQueue = new LinkedBlockingDeque<>();
+    private CameraRecordController mCameraRecordController;
 
     private CameraDevice.StateCallback mDeviceStateCallback = new CameraDevice.StateCallback() {
         @Override
         public void onOpened(CameraDevice camera) {
             Log.i(TAG, "deviceStateCallback onOpened: " + camera);
             mCameraDevice = camera;
-
-            //创建request
-            sendMessage(MSG_CREATE_REQUEST_BUILDERS,null);
         }
 
         @Override
         public void onDisconnected(CameraDevice camera) {
-            //mCameraLock.release();
             Log.i(TAG, "deviceStateCallback onDisconnected: " + camera);
             camera.close();
             mCameraDevice = null;
@@ -163,7 +115,6 @@ public class Camera2Impl implements ICamera2Api,Handler.Callback {
         @Override
         public void onError(CameraDevice camera, int error) {
             Log.e(TAG, "StateCallback onError: " + error);
-            //mCameraLock.release();
             camera.close();
             mCameraDevice = null;
 
@@ -179,6 +130,9 @@ public class Camera2Impl implements ICamera2Api,Handler.Callback {
                 return;
             }
             mCaptureSession = session;
+            if (mSessionListener != null){
+                mSessionListener.onAvailable();
+            }
         }
 
         @Override
@@ -187,65 +141,24 @@ public class Camera2Impl implements ICamera2Api,Handler.Callback {
         }
     };
 
-    private ImageReader.OnImageAvailableListener mPreviewImageAvailableListener = new ImageReader.OnImageAvailableListener() {
-        @Override
-        public void onImageAvailable(ImageReader reader) {
-            Image image = reader.acquireNextImage();
-//            mBuffer = convertYUV420888ToNv21(image);
-//            if (mFrameCallback != null) {
-            Log.i(TAG, "##### PreviewImageAvailableListener onImageAvailable: " + image.getPlanes());
-//                mFrameCallback.onFrame(image);
-//            }
-            image.close();
-        }
-    };
-
-    private ImageReader.OnImageAvailableListener mCaptureImageAvailableListener = new ImageReader.OnImageAvailableListener() {
-        @Override
-        public void onImageAvailable(ImageReader reader) {
-            try(Image image = reader.acquireNextImage()) {
-                // TODO: 2021/8/29 bugfix
-//                CaptureResult captureResult = mCaptureBlockingQueue.take();
-//                ByteBuffer buffer = null;
-//                if (image != null && captureResult != null) {
-//                    // Jpeg image data only occupy the planes[0].
-//                    buffer = image.getPlanes()[0].getBuffer();
-//                    int length = buffer.remaining();
-//                    //buffer.get()
-//                    CameraUtils.writeToMediaStore(TAG,mContext,captureResult,buffer.array(),image.getWidth(),image.getHeight());
-//                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-    };
-
-    private ImageReader.OnImageAvailableListener mRecordImageAvailableListener = new ImageReader.OnImageAvailableListener() {
-        @Override
-        public void onImageAvailable(ImageReader reader) {
-            Image image = reader.acquireNextImage();
-//            mBuffer = convertYUV420888ToNv21(image);
-//            if (mFrameCallback != null) {
-            Log.i(TAG, "##### RecordImageAvailableListener onImageAvailable: " + image.getPlanes());
-//                mFrameCallback.onFrame(image);
-//            }
-            image.close();
-        }
-    };
-
     public Camera2Impl(Context context) {
         mContext = context;
         mCameraManager = (CameraManager) context.getSystemService(Context.CAMERA_SERVICE);
-        mCameraThread = new HandlerThread("CameraThread");
-        mCameraThread.start();
-        mCameraHandler = new Handler(mCameraThread.getLooper(),this);
+
+        mHandler = new Handler(Looper.getMainLooper(),this);
 
         mCameraMap = new HashMap<>();
-        mDeviceOrientationListener = new DeviceOrientationListener(mContext);
-        mDeviceOrientationListener.enable();
-        mMediaActionSound = new MediaActionSound();
+
+        mCameraPreviewController = new CameraPreviewController(mContext,TAG);
+        mCameraImageController = new CameraImageController(mContext,TAG);
+        mCameraRecordController = new CameraRecordController(mContext,TAG);
 
         initCamera();
+    }
+
+    @Override
+    public void setSessionListener(CameraCaptureSessionListener sessionListener) {
+        mSessionListener = sessionListener;
     }
 
     @Override
@@ -269,12 +182,6 @@ public class Camera2Impl implements ICamera2Api,Handler.Callback {
                     Log.e(TAG, "startPreview error,camera device is null");
                     break;
                 }
-                try {
-                    mCaptureRequestBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
-                    mPreviewRequestBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
-                } catch (CameraAccessException e) {
-                    e.printStackTrace();
-                }
 
                 break;
             case MSG_CREATE_SESSION:
@@ -285,7 +192,7 @@ public class Camera2Impl implements ICamera2Api,Handler.Callback {
                 break;
             case MSG_SET_PREVIEW_SIZE:
                 Size size = (Size) msg.obj;
-                setPreviewSize(size.getWidth(),size.getHeight());
+                mCameraPreviewController.setSurfaceSize(mCameraInfo,size);
                 break;
             case MSG_START_PREVIEW:
                 startPreviewInner();
@@ -295,9 +202,7 @@ public class Camera2Impl implements ICamera2Api,Handler.Callback {
                 break;
             case MSG_SET_IMAGE_SIZE:
                 Size imageSize = (Size) msg.obj;
-                int format = ImageFormat.YUV_420_888;
-                int maxImages = 1;
-                setImageSize(imageSize.getWidth(),imageSize.getHeight(),format,maxImages);
+                mCameraImageController.setSurfaceSize(mCameraInfo,imageSize);
                 break;
             case MSG_CAPTURE_IMAGE:
                 startImageCapture();
@@ -329,14 +234,12 @@ public class Camera2Impl implements ICamera2Api,Handler.Callback {
     @Override
     public void close() {
         sendMessage(MSG_CLOSE_CAMERA,null);
-        mDeviceOrientationListener.disable();
     }
 
     @Override
     public void setPreviewSurfaceTexture(SurfaceTexture texture) {
-        mPreviewSurfaceTexture = texture;
+        mCameraPreviewController.setPreviewSurfaceTexture(texture);
     }
-
 
     @Override
     public void setPreviewSize(Size size) {
@@ -355,7 +258,7 @@ public class Camera2Impl implements ICamera2Api,Handler.Callback {
 
     @Override
     public void startPreview() {
-        sendMessage(MSG_START_PREVIEW,null,1000);
+        sendMessage(MSG_START_PREVIEW,null,0);
     }
 
     @Override
@@ -366,6 +269,25 @@ public class Camera2Impl implements ICamera2Api,Handler.Callback {
     @Override
     public void takePhoto() {
         sendMessage(MSG_CAPTURE_IMAGE,null);
+    }
+
+    @Override
+    public void setRecordSize(Size size) {
+        mCameraRecordController.setSurfaceSize(mCameraInfo,size);
+    }
+
+    @Override
+    public void startRecord() {
+        if (mCameraDevice == null){
+            Log.e(TAG,"startPreview error, cameraDevice is null");
+            return;
+        }
+
+        if (mCaptureSession == null){
+            Log.e(TAG,"startPreview error, captureSession is null");
+            return;
+        }
+        mCameraRecordController.sendCaptureRequest(mCameraInfo,mCameraDevice,mCaptureSession);
     }
 
     private boolean initCamera() {
@@ -455,7 +377,7 @@ public class Camera2Impl implements ICamera2Api,Handler.Callback {
                 Log.e(TAG, "Open camera failed. No camera permission");
                 return false;
             }
-            mCameraManager.openCamera(cameraId, mDeviceStateCallback, mCameraHandler);
+            mCameraManager.openCamera(cameraId, mDeviceStateCallback, mHandler);
         } catch (CameraAccessException e) {
             Log.e(TAG, "open error:" + e.getMessage());
             return false;
@@ -473,10 +395,7 @@ public class Camera2Impl implements ICamera2Api,Handler.Callback {
             mCameraDevice.close();
             mCameraDevice = null;
         }
-//        if (mImageReader != null) {
-//            mImageReader.close();
-//            mImageReader = null;
-//        }
+
         Log.e(TAG, "camera close ");
     }
 
@@ -494,21 +413,9 @@ public class Camera2Impl implements ICamera2Api,Handler.Callback {
 
         List<Surface> surfaceList = new ArrayList<>();
 
-        if (mPreviewSurfaceTexture != null && mPreviewSurface != null){
-
-            ImageReader imageReader = buildImageLoader(mPreviewImageAvailableListener, mPreviewSize.getWidth(),
-                    mPreviewSize.getHeight(),ImageFormat.YUV_420_888,1);
-            surfaceList.add(imageReader.getSurface());
-            surfaceList.add(mPreviewSurface);
-        }
-
-        if (mImageSurface != null){
-            surfaceList.add(mImageSurface);
-        }
-
-        if (mSurfaces != null && mSurfaces.size() != 0){
-            surfaceList.addAll(mSurfaces);
-        }
+        surfaceList.addAll(mCameraPreviewController.getSurfaces());
+        surfaceList.addAll(mCameraImageController.getSurfaces());
+        surfaceList.addAll(mCameraRecordController.getSurfaces());
 
         try {
             Log.i(TAG, "createSessionInner surfaceList.size=" + surfaceList.size());
@@ -525,7 +432,7 @@ public class Camera2Impl implements ICamera2Api,Handler.Callback {
                         list, Executors.newSingleThreadExecutor(), mSessionStateCallback);
                 mCameraDevice.createCaptureSession(configuration);
             } else {
-                mCameraDevice.createCaptureSession(surfaceList, mSessionStateCallback,mCameraHandler);
+                mCameraDevice.createCaptureSession(surfaceList, mSessionStateCallback, mHandler);
             }
         } catch (CameraAccessException e) {
             e.printStackTrace();
@@ -540,34 +447,6 @@ public class Camera2Impl implements ICamera2Api,Handler.Callback {
         Log.i(TAG, "closeSession ");
     }
 
-    private void setPreviewSize(int maxWidth,int maxHeight){
-        if (mCameraInfo != null){
-            Size previewSize = CameraUtils.getOptimalSize(mCameraInfo.map,SurfaceTexture.class,maxWidth,maxHeight);
-            if (previewSize == null){
-                previewSize = mPreviewSize;
-            }
-            mPreviewSize = previewSize;
-            if (mPreviewSurfaceTexture != null){
-                mPreviewSurfaceTexture.setDefaultBufferSize(previewSize.getWidth(), previewSize.getHeight());
-                mPreviewSurface = new Surface(mPreviewSurfaceTexture);
-            }
-        }
-    }
-
-    private void setImageSize(int width,int height,Integer format,int maxImages){
-        if (format == null){
-            //camera2 默认是YUV_420_888
-            format = ImageFormat.YUV_420_888;
-        }
-
-        if (mCameraInfo.map.isOutputSupportedFor(format)){
-            ImageReader imageReader = buildImageLoader(mCaptureImageAvailableListener,width,height,format,maxImages);
-            mImageSurface = imageReader.getSurface();
-        } else {
-            Log.w(TAG,"mCameraInfo id=" + mCameraInfo.cameraId + " not support format=" + format);
-        }
-    }
-
     private void startPreviewInner(){
         if (mCameraDevice == null){
             Log.e(TAG,"startPreview error, cameraDevice is null");
@@ -578,42 +457,7 @@ public class Camera2Impl implements ICamera2Api,Handler.Callback {
             Log.e(TAG,"startPreview error, captureSession is null");
             return;
         }
-
-        if (mCaptureRequestBuilder == null || mPreviewRequestBuilder == null){
-            Log.e(TAG,"startPreview error, captureRequestBuilder =" + mCaptureRequestBuilder + " or previewRequestBuilder =" +mPreviewRequestBuilder);
-            return;
-        }
-
-        if (mPreviewSurface != null){
-            mCaptureRequestBuilder.addTarget(mPreviewSurface);
-            mPreviewRequestBuilder.addTarget(mPreviewSurface);
-        }
-
-        if (mImageSurface != null){
-            mCaptureRequestBuilder.addTarget(mImageSurface);
-            mPreviewRequestBuilder.addTarget(mImageSurface);
-        }
-
-        try {
-            mCaptureSession.setRepeatingRequest(mPreviewRequestBuilder.build(), new CameraCaptureSession.CaptureCallback() {
-                @Override
-                public void onCaptureStarted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, long timestamp, long frameNumber) {
-                    super.onCaptureStarted(session, request, timestamp, frameNumber);
-                }
-
-                @Override
-                public void onCaptureProgressed(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull CaptureResult partialResult) {
-                    super.onCaptureProgressed(session, request, partialResult);
-                }
-
-                @Override
-                public void onCaptureCompleted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull TotalCaptureResult result) {
-                    super.onCaptureCompleted(session, request, result);
-                }
-            },mCameraHandler);
-        } catch (CameraAccessException e) {
-            e.printStackTrace();
-        }
+        mCameraPreviewController.sendCaptureRequest(mCameraInfo,mCameraDevice,mCaptureSession);
     }
 
     private void stopPreviewInner(){
@@ -634,8 +478,6 @@ public class Camera2Impl implements ICamera2Api,Handler.Callback {
         }
     }
 
-
-
     private void startImageCapture(){
         if (mCameraDevice == null){
             Log.e(TAG,"startImageCapture error, cameraDevice is null");
@@ -646,50 +488,7 @@ public class Camera2Impl implements ICamera2Api,Handler.Callback {
             Log.e(TAG,"startImageCapture error, captureSession is null");
             return;
         }
-
-        if (mCaptureRequestBuilder == null){
-            Log.e(TAG,"startImageCapture error, captureRequestBuilder is null");
-            return;
-        }
-
-        int deviceOrientation = mDeviceOrientationListener.getOrientation();
-
-        int jpegOrientation = CameraUtils.getImageOrientation(mCameraInfo.characteristics,deviceOrientation);
-
-        //设置角度
-        mCaptureRequestBuilder.set(CaptureRequest.JPEG_ORIENTATION,jpegOrientation);
-
-        // Configure the location information.
-        mCaptureRequestBuilder.set(CaptureRequest.JPEG_GPS_LOCATION,CameraUtils.getLocation(mContext));
-
-        // Configure the image quality.
-        mCaptureRequestBuilder.set(CaptureRequest.JPEG_QUALITY,Byte.valueOf("100"));
-        // Add the target surface to receive the jpeg image data.
-        mCaptureRequestBuilder.addTarget(mImageSurface);
-
-        try {
-            mCaptureSession.capture(mCaptureRequestBuilder.build(), new CameraCaptureSession.CaptureCallback() {
-                @Override
-                public void onCaptureStarted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, long timestamp, long frameNumber) {
-                    super.onCaptureStarted(session, request, timestamp, frameNumber);
-                    mMediaActionSound.play(MediaActionSound.SHUTTER_CLICK);
-                }
-
-                @Override
-                public void onCaptureCompleted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull TotalCaptureResult result) {
-                    super.onCaptureCompleted(session, request, result);
-
-                    try {
-                        mCaptureBlockingQueue.put(result);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-
-                }
-            }, mCameraHandler);
-        } catch (CameraAccessException e) {
-            e.printStackTrace();
-        }
+        mCameraImageController.sendCaptureRequest(mCameraInfo,mCameraDevice,mCaptureSession);
     }
 
 
@@ -698,18 +497,9 @@ public class Camera2Impl implements ICamera2Api,Handler.Callback {
     }
 
     private void sendMessage(int what,Object obj,long delay){
-        Message msg = mCameraHandler.obtainMessage(what);
+        Message msg = mHandler.obtainMessage(what);
         msg.obj = obj;
-        mCameraHandler.sendMessageDelayed(msg,delay);
+        mHandler.sendMessageDelayed(msg,delay);
         Log.i(TAG,"sendMessage what=0x" + String.format("%03x",what));
-    }
-
-    private ImageReader buildImageLoader(ImageReader.OnImageAvailableListener listener,int width, int height, int format, int maxImages) {
-        StringBuilder builder = new StringBuilder();
-        builder.append("width=").append(width).append(" height=").append(height).append(" format=").append(format).append(" maxImages=").append(maxImages);
-        Log.i(TAG, "buildImageLoader:" + builder.toString());
-        ImageReader imageReader = ImageReader.newInstance(width, height, format, maxImages);
-        imageReader.setOnImageAvailableListener(listener, mCameraHandler);
-        return imageReader;
     }
 }
