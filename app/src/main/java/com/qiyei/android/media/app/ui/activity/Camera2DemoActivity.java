@@ -17,16 +17,36 @@ public class Camera2DemoActivity extends AppCompatActivity {
 
     ICamera2Api mCamera2Api;
     private TextureView mTextureView;
+
+    private boolean isAvailable;
+    private boolean isRecord;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_camera2_demo);
         mCamera2Api = new Camera2Impl(this);
+        mCamera2Api.init(0);
+
 
         mTextureView = findViewById(R.id.camera_preview);
         mTextureView.setSurfaceTextureListener(new TextureView.SurfaceTextureListener() {
             @Override
             public void onSurfaceTextureAvailable(@NonNull SurfaceTexture surface, int width, int height) {
+                mCamera2Api.open(new ICamera2Api.CameraListener() {
+
+                    @Override
+                    public void onDeviceAvailable() {
+                        mCamera2Api.start();
+                    }
+
+                    @Override
+                    public void onSessionAvailable() {
+                        isAvailable = true;
+                        mCamera2Api.startPreview();
+                    }
+                });
+
                 mCamera2Api.setPreviewSurfaceTexture(surface);
 
                 Size size = new Size(1080,1920);
@@ -35,8 +55,6 @@ public class Camera2DemoActivity extends AppCompatActivity {
                 mCamera2Api.setImageSize(size);
 
                 mCamera2Api.setRecordSize(size);
-
-                mCamera2Api.createSession();
             }
 
             @Override
@@ -62,13 +80,15 @@ public class Camera2DemoActivity extends AppCompatActivity {
             }
         });
 
-
-        mCamera2Api.open();
-        mCamera2Api.setSessionListener(new ICamera2Api.CameraCaptureSessionListener() {
+        findViewById(R.id.capture_video_button).setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onAvailable() {
-                mCamera2Api.startPreview();
-                mCamera2Api.startRecord();
+            public void onClick(View v) {
+                if (isRecord){
+                    mCamera2Api.stopRecord();
+                } else {
+                    mCamera2Api.startRecord();
+                }
+                isRecord = !isRecord;
             }
         });
     }
@@ -76,11 +96,17 @@ public class Camera2DemoActivity extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
+
+        if (isAvailable){
+            mCamera2Api.startPreview();
+            mCamera2Api.startRecord();
+        }
     }
 
     @Override
     protected void onStop() {
         super.onStop();
-        mCamera2Api.stopPreview();
+        isAvailable = false;
+        mCamera2Api.stop();
     }
 }

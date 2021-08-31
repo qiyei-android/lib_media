@@ -118,7 +118,7 @@ public class CameraUtils {
      * 获取image的角度
      * @return
      */
-    public static int getImageOrientation(CameraCharacteristics cameraCharacteristics, int deviceOrientation) {
+    public static int getOrientation(CameraCharacteristics cameraCharacteristics, int deviceOrientation) {
         if (deviceOrientation == android.view.OrientationEventListener.ORIENTATION_UNKNOWN) {
             return 0;
         }

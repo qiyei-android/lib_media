@@ -19,8 +19,6 @@ import androidx.annotation.NonNull;
 import com.qiyei.android.media.api.CameraUtils;
 
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
 
@@ -47,9 +45,31 @@ public class CameraImageController extends AbsCameraController{
     public CameraImageController(Context context,String tag) {
         super(context,tag,"CameraImage");
         mDeviceOrientationListener = new DeviceOrientationListener(context);
-        mDeviceOrientationListener.enable();
         mMediaActionSound = new MediaActionSound();
+    }
 
+    @Override
+    public void prepare(CameraInfo cameraInfo) {
+        //1 检查surface
+        if (mImageReader == null){
+            mImageReader = buildImageReader(mTag, mSurfaceSize,ImageFormat.JPEG,1);
+        }
+        mDeviceOrientationListener.enable();
+    }
+
+    @Override
+    public void start(CameraInfo cameraInfo, CameraDevice cameraDevice, CameraCaptureSession captureSession) {
+        CaptureRequest request = buildCaptureRequest(cameraInfo,cameraDevice);
+        if (request == null){
+            Log.e(mTag,subTag + "start error, CaptureRequest is null");
+            return;
+        }
+        sendCaptureRequest(cameraInfo,cameraDevice,captureSession,request);
+    }
+
+    @Override
+    public void stop() {
+        mDeviceOrientationListener.disable();
     }
 
     @Override
@@ -75,7 +95,7 @@ public class CameraImageController extends AbsCameraController{
         super.setSurfaceSize(cameraInfo,size);
         mSurfaceSize = size;
         if (cameraInfo.map.isOutputSupportedFor(ImageFormat.JPEG)){
-            mImageReader = buildImageLoader(mTag,mSurfaceSize,ImageFormat.JPEG,1);
+            mImageReader = buildImageReader(mTag, mSurfaceSize,ImageFormat.JPEG,1);
         } else {
             Log.w(mTag,subTag + "mCameraInfo id=" + cameraInfo.cameraId + " not support format=" + ImageFormat.JPEG);
         }
@@ -83,7 +103,7 @@ public class CameraImageController extends AbsCameraController{
 
 
     @Override
-    public CaptureRequest buildCaptureRequest(CameraInfo cameraInfo,CameraDevice cameraDevice) {
+    protected CaptureRequest buildCaptureRequest(CameraInfo cameraInfo,CameraDevice cameraDevice) {
         super.buildCaptureRequest(cameraInfo,cameraDevice);
         try {
             mCaptureRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
@@ -93,7 +113,7 @@ public class CameraImageController extends AbsCameraController{
 
             int deviceOrientation = mDeviceOrientationListener.getOrientation();
 
-            int jpegOrientation = CameraUtils.getImageOrientation(cameraInfo.characteristics,deviceOrientation);
+            int jpegOrientation = CameraUtils.getOrientation(cameraInfo.characteristics,deviceOrientation);
 
             //设置角度
             mCaptureRequestBuilder.set(CaptureRequest.JPEG_ORIENTATION,jpegOrientation);
@@ -112,13 +132,8 @@ public class CameraImageController extends AbsCameraController{
     }
 
     @Override
-    public void sendCaptureRequest(CameraInfo cameraInfo,CameraDevice cameraDevice,CameraCaptureSession captureSession) {
-        super.sendCaptureRequest(cameraInfo,cameraDevice,captureSession);
-        CaptureRequest request = buildCaptureRequest(cameraInfo,cameraDevice);
-        if (request == null){
-            Log.e(mTag,subTag + "sendCaptureRequest error, CaptureRequest is null");
-            return;
-        }
+    protected void sendCaptureRequest(CameraInfo cameraInfo,CameraDevice cameraDevice,CameraCaptureSession captureSession,CaptureRequest request) {
+        super.sendCaptureRequest(cameraInfo,cameraDevice,captureSession,request);
         try {
             captureSession.capture(request, new CameraCaptureSession.CaptureCallback() {
                 @Override

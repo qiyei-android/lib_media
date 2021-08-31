@@ -15,7 +15,6 @@ import android.hardware.camera2.params.StreamConfigurationMap;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
-import android.os.Message;
 import android.util.Log;
 import android.util.Range;
 import android.util.Size;
@@ -36,33 +35,13 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 
-/**
- * 重构思路
- * 建立预览 拍照，视频录制等三个controller 分辨建立对应的surface  size imageListener
- */
-public class Camera2Impl implements ICamera2Api,Handler.Callback {
+public class Camera2Impl implements ICamera2Api {
 
     private static final String TAG = "Camera2Impl";
-    private static final int TIME_OUT = 2000;
 
-    private static final int MSG_OPEN_CAMERA = 0x100;
-    private static final int MSG_CLOSE_CAMERA = 0x101;
-
-    private static final int MSG_CREATE_REQUEST_BUILDERS = 0x200;
-
-    private static final int MSG_CREATE_SESSION = 0x300;
-    private static final int MSG_CLOSE_SESSION = 0x301;
-    private static final int MSG_SET_PREVIEW_SIZE = 0x400;
-    private static final int MSG_START_PREVIEW = 0x401;
-    private static final int MSG_STOP_PREVIEW = 0x402;
-    private static final int MSG_SET_IMAGE_SIZE = 0x500;
-    private static final int MSG_CAPTURE_IMAGE = 0x501;
-    private static final int MSG_CAPTURE_IMAGE_BURST = 0x502;
-    private static final int MSG_START_CAPTURE_IMAGE_CONTINUOUSLY = 0x503;
-
-    private static final int MSG_START_RECORD = 0x600;
-    private static final int MSG_STOP_RECORD = 0x601;
-
+    /**
+     * context
+     */
     private Context mContext;
 
     /**
@@ -75,6 +54,9 @@ public class Camera2Impl implements ICamera2Api,Handler.Callback {
      */
     private Handler mHandler;
 
+    /**
+     * 相机列表
+     */
     private Map<String, CameraInfo> mCameraMap;
     /**
      * 相机信息封装
@@ -90,7 +72,10 @@ public class Camera2Impl implements ICamera2Api,Handler.Callback {
      */
     private CameraCaptureSession mCaptureSession;
 
-    private CameraCaptureSessionListener mSessionListener;
+    /**
+     * 相机监听器
+     */
+    private CameraListener mCameraListener;
 
     private CameraPreviewController mCameraPreviewController;
 
@@ -103,6 +88,9 @@ public class Camera2Impl implements ICamera2Api,Handler.Callback {
         public void onOpened(CameraDevice camera) {
             Log.i(TAG, "deviceStateCallback onOpened: " + camera);
             mCameraDevice = camera;
+            if (mCameraListener != null){
+                mCameraListener.onDeviceAvailable();
+            }
         }
 
         @Override
@@ -118,7 +106,6 @@ public class Camera2Impl implements ICamera2Api,Handler.Callback {
             camera.close();
             mCameraDevice = null;
 
-            sendMessage(MSG_STOP_PREVIEW,null);
         }
     };
 
@@ -130,8 +117,8 @@ public class Camera2Impl implements ICamera2Api,Handler.Callback {
                 return;
             }
             mCaptureSession = session;
-            if (mSessionListener != null){
-                mSessionListener.onAvailable();
+            if (mCameraListener != null){
+                mCameraListener.onSessionAvailable();
             }
         }
 
@@ -145,135 +132,159 @@ public class Camera2Impl implements ICamera2Api,Handler.Callback {
         mContext = context;
         mCameraManager = (CameraManager) context.getSystemService(Context.CAMERA_SERVICE);
 
-        mHandler = new Handler(Looper.getMainLooper(),this);
+        mHandler = new Handler(Looper.getMainLooper());
 
         mCameraMap = new HashMap<>();
-
-        mCameraPreviewController = new CameraPreviewController(mContext,TAG);
-        mCameraImageController = new CameraImageController(mContext,TAG);
-        mCameraRecordController = new CameraRecordController(mContext,TAG);
 
         initCamera();
     }
 
     @Override
-    public void setSessionListener(CameraCaptureSessionListener sessionListener) {
-        mSessionListener = sessionListener;
+    public void init(int type) {
+        mCameraPreviewController = new CameraPreviewController(mContext,TAG);
+        mCameraImageController = new CameraImageController(mContext,TAG);
+        mCameraRecordController = new CameraRecordController(mContext,TAG);
     }
 
     @Override
-    public boolean handleMessage(@NonNull Message msg) {
-        int what = msg.what;
-        Log.i(TAG,"handleMessage what=0x" + String.format("%03x",what) + " start");
-        switch (what){
-            case MSG_OPEN_CAMERA:
-                String cameraId = null;
-                if (msg.obj instanceof String){
-                    cameraId = (String) msg.obj;
-                }
-                boolean ret = open(cameraId);
-                Log.i(TAG,"handleMessage open=" + ret);
-                break;
-            case MSG_CLOSE_CAMERA:
-                closeInner();
-                break;
-            case MSG_CREATE_REQUEST_BUILDERS:
-                if (mCameraDevice == null){
-                    Log.e(TAG, "startPreview error,camera device is null");
-                    break;
-                }
-
-                break;
-            case MSG_CREATE_SESSION:
-                createSessionInner();
-                break;
-            case MSG_CLOSE_SESSION:
-                closeSession();
-                break;
-            case MSG_SET_PREVIEW_SIZE:
-                Size size = (Size) msg.obj;
-                mCameraPreviewController.setSurfaceSize(mCameraInfo,size);
-                break;
-            case MSG_START_PREVIEW:
-                startPreviewInner();
-                break;
-            case MSG_STOP_PREVIEW:
-                stopPreviewInner();
-                break;
-            case MSG_SET_IMAGE_SIZE:
-                Size imageSize = (Size) msg.obj;
-                mCameraImageController.setSurfaceSize(mCameraInfo,imageSize);
-                break;
-            case MSG_CAPTURE_IMAGE:
-                startImageCapture();
-                break;
-            case MSG_CAPTURE_IMAGE_BURST:
-
-                break;
-            case MSG_START_CAPTURE_IMAGE_CONTINUOUSLY:
-
-                break;
-            case MSG_START_RECORD:
-
-                break;
-            case MSG_STOP_RECORD:
-
-                break;
-            default:
+    public boolean open(CameraListener listener) {
+        if (listener == null){
+            return false;
         }
-
-
-        return false;
-    }
-
-    @Override
-    public boolean open() {
-        return open(mCameraInfo.cameraId);
+        mCameraListener = listener;
+        boolean ret = open(mCameraInfo.cameraId);
+        if (mCameraPreviewController != null){
+            mCameraPreviewController.open();
+        }
+        if (mCameraImageController != null){
+            mCameraImageController.open();
+        }
+        if (mCameraRecordController != null){
+            mCameraRecordController.open();
+        }
+        return ret;
     }
 
     @Override
     public void close() {
-        sendMessage(MSG_CLOSE_CAMERA,null);
+        closeSession();
+        closeDevice();
+        Log.i(TAG, "camera close ");
     }
+
 
     @Override
     public void setPreviewSurfaceTexture(SurfaceTexture texture) {
-        mCameraPreviewController.setPreviewSurfaceTexture(texture);
+        if (mCameraPreviewController != null){
+            mCameraPreviewController.setPreviewSurfaceTexture(texture);
+        }
     }
 
     @Override
     public void setPreviewSize(Size size) {
-        sendMessage(MSG_SET_PREVIEW_SIZE,size);
+        if (mCameraPreviewController != null){
+            mCameraPreviewController.setSurfaceSize(mCameraInfo,size);
+        }
     }
 
     @Override
     public void setImageSize(Size size) {
-        sendMessage(MSG_SET_IMAGE_SIZE,size);
-    }
-
-    @Override
-    public void createSession() {
-        sendMessage(MSG_CREATE_SESSION,null);
-    }
-
-    @Override
-    public void startPreview() {
-        sendMessage(MSG_START_PREVIEW,null,0);
-    }
-
-    @Override
-    public void stopPreview() {
-        sendMessage(MSG_STOP_PREVIEW,null);
-    }
-
-    @Override
-    public void takePhoto() {
-        sendMessage(MSG_CAPTURE_IMAGE,null);
+        if (mCameraImageController != null){
+            mCameraImageController.setSurfaceSize(mCameraInfo,size);
+        }
     }
 
     @Override
     public void setRecordSize(Size size) {
-        mCameraRecordController.setSurfaceSize(mCameraInfo,size);
+        if (mCameraRecordController != null){
+            mCameraRecordController.setSurfaceSize(mCameraInfo,size);
+        }
+    }
+
+    @Override
+    public void start() {
+        if (mCameraPreviewController != null){
+            mCameraPreviewController.prepare(mCameraInfo);
+        }
+        if (mCameraImageController != null){
+            mCameraImageController.prepare(mCameraInfo);
+        }
+        if (mCameraRecordController != null){
+            mCameraRecordController.prepare(mCameraInfo);
+        }
+        createSession();
+    }
+
+
+    @Override
+    public void stop() {
+        if (mCameraPreviewController != null){
+            mCameraPreviewController.stop();
+        }
+        if (mCameraImageController != null){
+            mCameraImageController.stop();
+        }
+        if (mCameraRecordController != null){
+            mCameraRecordController.stop();
+        }
+        closeSession();
+    }
+
+
+    @Override
+    public void startPreview() {
+        if (mCameraDevice == null){
+            Log.e(TAG,"startPreview error, cameraDevice is null");
+            return;
+        }
+
+        if (mCaptureSession == null){
+            Log.e(TAG,"startPreview error, captureSession is null");
+            return;
+        }
+        if (mCameraPreviewController != null){
+            mCameraPreviewController.start(mCameraInfo,mCameraDevice,mCaptureSession);
+        }
+    }
+
+    @Override
+    public void stopPreview() {
+        if (mCameraDevice == null){
+            Log.e(TAG,"stopPreviewInner error, cameraDevice is null");
+            return;
+        }
+
+        if (mCaptureSession == null){
+            Log.e(TAG,"stopPreviewInner error, captureSession is null");
+            return;
+        }
+
+        if (mCameraPreviewController != null){
+            mCameraPreviewController.stop();
+        }
+
+        try {
+            mCaptureSession.stopRepeating();
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    public void takePhoto() {
+        if (mCameraDevice == null){
+            Log.e(TAG,"startImageCapture error, cameraDevice is null");
+            return;
+        }
+
+        if (mCaptureSession == null){
+            Log.e(TAG,"startImageCapture error, captureSession is null");
+            return;
+        }
+
+        if (mCameraImageController != null){
+            mCameraImageController.start(mCameraInfo,mCameraDevice,mCaptureSession);
+        }
     }
 
     @Override
@@ -287,7 +298,14 @@ public class Camera2Impl implements ICamera2Api,Handler.Callback {
             Log.e(TAG,"startPreview error, captureSession is null");
             return;
         }
-        mCameraRecordController.sendCaptureRequest(mCameraInfo,mCameraDevice,mCaptureSession);
+        if (mCameraRecordController != null){
+            mCameraRecordController.start(mCameraInfo,mCameraDevice,mCaptureSession);
+        }
+    }
+
+    @Override
+    public void stopRecord() {
+        mCameraRecordController.stop();
     }
 
     private boolean initCamera() {
@@ -385,27 +403,13 @@ public class Camera2Impl implements ICamera2Api,Handler.Callback {
         return true;
     }
 
-    private void closeInner(){
-        if (mCaptureSession != null) {
-            mCaptureSession.close();
-            mCaptureSession = null;
-        }
-
-        if (mCameraDevice != null) {
-            mCameraDevice.close();
-            mCameraDevice = null;
-        }
-
-        Log.e(TAG, "camera close ");
-    }
-
-    private void createSessionInner(){
+    private void createSession() {
         if (mCameraInfo == null){
             Log.e(TAG, "createSession error cameraInfo is null");
             return;
         }
         if (mCameraDevice == null){
-            Log.e(TAG, "createSession error mCameraDevice is null");
+            Log.e(TAG, "createSession error CameraDevice is null");
             return;
         }
         Range<Integer>[] fpsRanges = mCameraInfo.characteristics.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES);
@@ -413,9 +417,15 @@ public class Camera2Impl implements ICamera2Api,Handler.Callback {
 
         List<Surface> surfaceList = new ArrayList<>();
 
-        surfaceList.addAll(mCameraPreviewController.getSurfaces());
-        surfaceList.addAll(mCameraImageController.getSurfaces());
-        surfaceList.addAll(mCameraRecordController.getSurfaces());
+        if (mCameraPreviewController != null){
+            surfaceList.addAll(mCameraPreviewController.getSurfaces());
+        }
+        if (mCameraImageController != null){
+            surfaceList.addAll(mCameraImageController.getSurfaces());
+        }
+        if (mCameraRecordController != null){
+            surfaceList.addAll(mCameraRecordController.getSurfaces());
+        }
 
         try {
             Log.i(TAG, "createSessionInner surfaceList.size=" + surfaceList.size());
@@ -439,67 +449,18 @@ public class Camera2Impl implements ICamera2Api,Handler.Callback {
         }
     }
 
+    private void closeDevice() {
+        if (mCameraDevice != null) {
+            mCameraDevice.close();
+            mCameraDevice = null;
+        }
+    }
+
     private void closeSession(){
         if (mCaptureSession != null){
             mCaptureSession.close();
             mCaptureSession = null;
         }
         Log.i(TAG, "closeSession ");
-    }
-
-    private void startPreviewInner(){
-        if (mCameraDevice == null){
-            Log.e(TAG,"startPreview error, cameraDevice is null");
-            return;
-        }
-
-        if (mCaptureSession == null){
-            Log.e(TAG,"startPreview error, captureSession is null");
-            return;
-        }
-        mCameraPreviewController.sendCaptureRequest(mCameraInfo,mCameraDevice,mCaptureSession);
-    }
-
-    private void stopPreviewInner(){
-        if (mCameraDevice == null){
-            Log.e(TAG,"stopPreviewInner error, cameraDevice is null");
-            return;
-        }
-
-        if (mCaptureSession == null){
-            Log.e(TAG,"stopPreviewInner error, captureSession is null");
-            return;
-        }
-
-        try {
-            mCaptureSession.stopRepeating();
-        } catch (CameraAccessException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void startImageCapture(){
-        if (mCameraDevice == null){
-            Log.e(TAG,"startImageCapture error, cameraDevice is null");
-            return;
-        }
-
-        if (mCaptureSession == null){
-            Log.e(TAG,"startImageCapture error, captureSession is null");
-            return;
-        }
-        mCameraImageController.sendCaptureRequest(mCameraInfo,mCameraDevice,mCaptureSession);
-    }
-
-
-    private void sendMessage(int what,Object obj){
-        sendMessage(what,obj,0);
-    }
-
-    private void sendMessage(int what,Object obj,long delay){
-        Message msg = mHandler.obtainMessage(what);
-        msg.obj = obj;
-        mHandler.sendMessageDelayed(msg,delay);
-        Log.i(TAG,"sendMessage what=0x" + String.format("%03x",what));
     }
 }

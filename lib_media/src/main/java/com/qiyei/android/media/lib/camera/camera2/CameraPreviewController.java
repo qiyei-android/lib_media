@@ -28,17 +28,37 @@ public class CameraPreviewController extends AbsCameraController{
      */
     private SurfaceTexture mPreviewSurfaceTexture;
 
-    /**
-     * 预览Surface
-     */
-    private Surface mPreviewSurface;
-
     public CameraPreviewController(Context context,String tag) {
         super(context,tag,"CameraPreview");
     }
 
     public void setPreviewSurfaceTexture(SurfaceTexture texture){
         this.mPreviewSurfaceTexture = texture;
+    }
+
+    @Override
+    public void prepare(CameraInfo cameraInfo) {
+        if (mImageReader == null){
+            mImageReader = buildImageReader(mTag, mSurfaceSize,ImageFormat.YUV_420_888,1);
+        }
+        if (mPreviewSurfaceTexture == null){
+            Log.w(mTag,subTag + "prepare PreviewSurfaceTexture is null");
+        }
+    }
+
+    @Override
+    public void start(CameraInfo cameraInfo, CameraDevice cameraDevice, CameraCaptureSession captureSession) {
+        CaptureRequest request = buildCaptureRequest(cameraInfo,cameraDevice);
+        if (request == null){
+            Log.e(mTag,subTag + "start error, CaptureRequest is null");
+            return;
+        }
+        sendCaptureRequest(cameraInfo,cameraDevice,captureSession,request);
+    }
+
+    @Override
+    public void stop() {
+
     }
 
     @Override
@@ -56,23 +76,22 @@ public class CameraPreviewController extends AbsCameraController{
         }
         if (mPreviewSurfaceTexture != null){
             mPreviewSurfaceTexture.setDefaultBufferSize(mSurfaceSize.getWidth(), mSurfaceSize.getHeight());
-            mPreviewSurface = new Surface(mPreviewSurfaceTexture);
         }
-        mImageReader = buildImageLoader(mTag,mSurfaceSize,ImageFormat.YUV_420_888,1);
+        mImageReader = buildImageReader(mTag, mSurfaceSize,ImageFormat.YUV_420_888,1);
     }
 
     @Override
     public List<Surface> getSurfaces() {
         List<Surface> list = new ArrayList<>();
         list.addAll(super.getSurfaces());
-        if (mPreviewSurface != null){
-            list.add(mPreviewSurface);
+        if (mPreviewSurfaceTexture != null){
+            list.add(new Surface(mPreviewSurfaceTexture));
         }
         return list;
     }
 
     @Override
-    public CaptureRequest buildCaptureRequest(CameraInfo cameraInfo,CameraDevice cameraDevice) {
+    protected CaptureRequest buildCaptureRequest(CameraInfo cameraInfo,CameraDevice cameraDevice) {
         super.buildCaptureRequest(cameraInfo,cameraDevice);
         try {
             mCaptureRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
@@ -89,16 +108,11 @@ public class CameraPreviewController extends AbsCameraController{
     }
 
     @Override
-    public void sendCaptureRequest(CameraInfo cameraInfo,CameraDevice cameraDevice,CameraCaptureSession captureSession) {
-        super.sendCaptureRequest(cameraInfo,cameraDevice,captureSession);
+    protected void sendCaptureRequest(CameraInfo cameraInfo,CameraDevice cameraDevice,CameraCaptureSession captureSession,CaptureRequest captureRequest) {
+        super.sendCaptureRequest(cameraInfo,cameraDevice,captureSession,captureRequest);
 
-        CaptureRequest request = buildCaptureRequest(cameraInfo,cameraDevice);
-        if (request == null){
-            Log.e(mTag,subTag + "sendCaptureRequest error, CaptureRequest is null");
-            return;
-        }
         try {
-            captureSession.setRepeatingRequest(request, new CameraCaptureSession.CaptureCallback() {
+            captureSession.setRepeatingRequest(captureRequest, new CameraCaptureSession.CaptureCallback() {
                 @Override
                 public void onCaptureStarted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, long timestamp, long frameNumber) {
                     super.onCaptureStarted(session, request, timestamp, frameNumber);

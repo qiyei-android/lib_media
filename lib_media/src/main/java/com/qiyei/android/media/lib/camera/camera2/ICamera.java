@@ -13,17 +13,56 @@ import java.util.List;
 
 public interface ICamera {
 
+    /**
+     * 打开
+     */
+    void open();
+
+    /**
+     * 关闭
+     */
+    void close();
+
+    /**
+     * 准备
+     */
+    void prepare(CameraInfo cameraInfo);
+
+    /**
+     * 开始业务
+     * @param cameraInfo
+     * @param cameraDevice
+     * @param captureSession
+     */
+    void start(CameraInfo cameraInfo,CameraDevice cameraDevice,CameraCaptureSession captureSession);
+
+    /**
+     * 停止业务
+     */
+    void stop();
+
+    /**
+     * 设置surface大小
+     * @param cameraInfo
+     * @param size
+     */
     void setSurfaceSize(CameraInfo cameraInfo, Size size);
 
+    /**
+     * 获取所有的surface
+     * @return
+     */
     List<Surface> getSurfaces();
 
+    /**
+     * 获取Handler
+     * @return
+     */
     Handler getHandler();
 
-    CaptureRequest buildCaptureRequest(CameraInfo cameraInfo,CameraDevice cameraDevice);
-
-    void sendCaptureRequest(CameraInfo cameraInfo,CameraDevice cameraDevice,CameraCaptureSession captureSession);
-
+    /**
+     * Image回调
+     * @param image
+     */
     void onImageCallBack(Image image);
-
-    void close();
 }

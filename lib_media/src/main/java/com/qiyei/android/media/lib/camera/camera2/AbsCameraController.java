@@ -46,9 +46,14 @@ public abstract class AbsCameraController implements ICamera{
     protected CaptureRequest.Builder mCaptureRequestBuilder;
 
     /**
+     * CaptureRequest请求
+     */
+    protected CameraCaptureSession mCaptureSession;
+
+    /**
      * surface尺寸
      */
-    protected Size mSurfaceSize = new Size(640,960);
+    protected Size mSurfaceSize = new Size(1080,1920);
 
     /**
      * ImageReader
@@ -71,10 +76,29 @@ public abstract class AbsCameraController implements ICamera{
         mContext = context;
         this.mTag = tag;
         this.subTag = subTag + " ";
+    }
+
+    @Override
+    public void open() {
         mCameraThread = new HandlerThread(mTag);
         mCameraThread.start();
-        mCameraHandler = new Handler(mCameraThread.getLooper());
 
+        mCameraHandler = new Handler(mCameraThread.getLooper());
+    }
+
+    @Override
+    public void close() {
+        mCaptureRequestBuilder = null;
+
+        if (mImageReader != null){
+            mImageReader.close();
+            mImageReader = null;
+        }
+        mCameraHandler = null;
+        if (mCameraThread != null){
+            mCameraThread.quitSafely();
+            mCameraThread = null;
+        }
     }
 
     @Override
@@ -99,30 +123,24 @@ public abstract class AbsCameraController implements ICamera{
         return list;
     }
 
-    @Override
-    public CaptureRequest buildCaptureRequest(CameraInfo cameraInfo, CameraDevice cameraDevice) {
+    protected CaptureRequest buildCaptureRequest(CameraInfo cameraInfo, CameraDevice cameraDevice) {
         if (cameraInfo == null || cameraDevice == null){
             throw new IllegalArgumentException(subTag + "buildCaptureRequest cameraInfo,map or size is null");
         }
         return null;
     }
 
-    @Override
-    public void sendCaptureRequest(CameraInfo cameraInfo,CameraDevice cameraDevice,CameraCaptureSession captureSession) {
-        if (cameraInfo == null || cameraDevice == null || captureSession == null){
-            throw new IllegalArgumentException(subTag + "sendCaptureRequest cameraInfo,cameraDevice or captureSession is null");
+
+    protected void sendCaptureRequest(CameraInfo cameraInfo,CameraDevice cameraDevice,CameraCaptureSession captureSession,CaptureRequest request) {
+        if (cameraInfo == null || cameraDevice == null || captureSession == null || request == null){
+            throw new IllegalArgumentException(subTag + "sendCaptureRequest cameraInfo,cameraDevice , captureSession or request is null");
         }
     }
 
-    @Override
-    public void close() {
-
-    }
-
-    protected ImageReader buildImageLoader(String tag,Size size, int format, int maxImages) {
+    protected ImageReader buildImageReader(String tag, Size size, int format, int maxImages) {
         StringBuilder builder = new StringBuilder();
         builder.append("width=").append(size.getWidth()).append(" height=").append(size.getHeight()).append(" format=").append(format).append(" maxImages=").append(maxImages);
-        Log.i(tag, subTag + "buildImageLoader:" + builder.toString());
+        Log.i(tag, subTag + "buildImageReader:" + builder.toString());
         ImageReader imageReader = ImageReader.newInstance(size.getWidth(), size.getHeight(), format, maxImages);
         imageReader.setOnImageAvailableListener(mImageAvailableListener, mCameraHandler);
         return imageReader;
