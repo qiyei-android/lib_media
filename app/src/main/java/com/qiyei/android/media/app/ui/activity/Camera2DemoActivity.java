@@ -99,7 +99,6 @@ public class Camera2DemoActivity extends AppCompatActivity {
 
         if (isAvailable){
             mCamera2Api.startPreview();
-            mCamera2Api.startRecord();
         }
     }
 

@@ -51,6 +51,8 @@ public class CameraRecordController extends AbsCameraController{
 
     private String mVideoPath;
 
+    private boolean isPrepare;
+
     /**
      * 捕获阻塞队列
      */
@@ -62,23 +64,34 @@ public class CameraRecordController extends AbsCameraController{
         mDeviceOrientationListener = new DeviceOrientationListener(context);
         mDeviceOrientationListener.enable();
         mMediaActionSound = new MediaActionSound();
-        initMediaRecorder();
     }
 
     @Override
     public void prepare(CameraInfo cameraInfo) {
         mDeviceOrientationListener.enable();
-        if (mMediaRecorder == null){
-            Log.e(mTag,subTag + "start error,mMediaRecorder is null");
-            return;
-        }
+        mMediaRecorder = new MediaRecorder();
         try {
+            mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
+            mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
+            mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
+
             mVideoPath = getVideoPath();
             mMediaRecorder.setOutputFile(mVideoPath);
+
+            mMediaRecorder.setVideoEncodingBitRate(MAX_BIT_RATE);
+            mMediaRecorder.setVideoFrameRate(FRAME_RATE);
+            //获取可用的录制视频的尺寸
+            mMediaRecorder.setVideoSize(mSurfaceSize.getWidth(), mSurfaceSize.getHeight());
+
+            mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);
+            mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
+
             int deviceOrientation = mDeviceOrientationListener.getOrientation();
             mMediaRecorder.setOrientationHint(CameraUtils.getOrientation(cameraInfo.characteristics,deviceOrientation));
 
             mMediaRecorder.prepare();
+            Log.i(mTag,subTag + "prepare,cameraInfo.cameraId=" + cameraInfo.cameraId);
+            isPrepare = true;
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -98,9 +111,13 @@ public class CameraRecordController extends AbsCameraController{
 
     @Override
     public void stop() {
+        super.stop();
         mDeviceOrientationListener.disable();
+        mMediaActionSound.play(MediaActionSound.START_VIDEO_RECORDING);
+
         mMediaRecorder.stop();
         mMediaRecorder.reset();
+        isPrepare = false;
     }
 
 
@@ -123,9 +140,6 @@ public class CameraRecordController extends AbsCameraController{
 //        } else {
 //            Log.w(mTag,subTag + "mCameraInfo id=" + cameraInfo.cameraId + " not support format=" + ImageFormat.YUV_420_888);
 //        }
-
-        //获取可用的录制视频的尺寸
-        mMediaRecorder.setVideoSize(mSurfaceSize.getWidth(), mSurfaceSize.getHeight());
     }
 
 
@@ -134,7 +148,7 @@ public class CameraRecordController extends AbsCameraController{
         super.buildCaptureRequest(cameraInfo,cameraDevice);
         try {
             mCaptureRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_RECORD);
-            for (Surface surface : getSurfaces()){
+            for (Surface surface : getSurfaces(cameraInfo)){
                 mCaptureRequestBuilder.addTarget(surface);
             }
             return mCaptureRequestBuilder.build();
@@ -145,55 +159,48 @@ public class CameraRecordController extends AbsCameraController{
     }
 
     @Override
-    public List<Surface> getSurfaces() {
-        List<Surface> list = new ArrayList<>();
-        if (mMediaRecorder != null){
-            list.add(mMediaRecorder.getSurface());
+    public List<Surface> getSurfaces(CameraInfo cameraInfo) {
+        if (mSurfaces == null){
+            mSurfaces = new ArrayList<>();
+            if (mPreviewSurface != null){
+                mSurfaces.add(mPreviewSurface);
+            }
+            if (mImageReader != null){
+                mSurfaces.add(mImageReader.getSurface());
+            }
+            if (!isPrepare){
+                prepare(cameraInfo);
+            }
+            if (mMediaRecorder != null){
+                mSurfaces.add(mMediaRecorder.getSurface());
+            }
         }
-        return list;
+        Log.i(mTag,subTag + "getSurfaces isPrepare=" + isPrepare);
+        return mSurfaces;
     }
 
     @Override
     protected void sendCaptureRequest(CameraInfo cameraInfo,CameraDevice cameraDevice,CameraCaptureSession captureSession,CaptureRequest request) {
         super.sendCaptureRequest(cameraInfo,cameraDevice,captureSession,request);
+        mMediaActionSound.play(MediaActionSound.START_VIDEO_RECORDING);
+        //开始录制
+        mMediaRecorder.start();
         try {
-            captureSession.capture(request, new CameraCaptureSession.CaptureCallback() {
+            captureSession.setRepeatingRequest(request, new CameraCaptureSession.CaptureCallback() {
                 @Override
                 public void onCaptureStarted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, long timestamp, long frameNumber) {
                     super.onCaptureStarted(session, request, timestamp, frameNumber);
-                    mMediaActionSound.play(MediaActionSound.START_VIDEO_RECORDING);
-                    //开始录制
-                    mMediaRecorder.start();
+
                 }
 
                 @Override
                 public void onCaptureCompleted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull TotalCaptureResult result) {
                     super.onCaptureCompleted(session, request, result);
-
-//                    try {
-//                        mCaptureBlockingQueue.put(result);
-//                    } catch (InterruptedException e) {
-//                        e.printStackTrace();
-//                    }
-
                 }
             }, getHandler());
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
-    }
-
-    private void initMediaRecorder(){
-        mMediaRecorder = new MediaRecorder();
-        mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
-        mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
-        mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
-
-        mMediaRecorder.setVideoEncodingBitRate(MAX_BIT_RATE);
-        mMediaRecorder.setVideoFrameRate(FRAME_RATE);
-
-        mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);
-        mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
     }
 
     private String getVideoPath(){

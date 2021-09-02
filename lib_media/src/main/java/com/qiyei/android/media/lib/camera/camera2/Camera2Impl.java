@@ -28,8 +28,10 @@ import com.qiyei.android.media.api.ICamera2Api;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.concurrent.Executors;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -83,6 +85,10 @@ public class Camera2Impl implements ICamera2Api {
 
     private CameraRecordController mCameraRecordController;
 
+    private Queue<Runnable> mTaskQueue = new LinkedList<>();
+
+    private boolean hasCreateSession;
+
     private CameraDevice.StateCallback mDeviceStateCallback = new CameraDevice.StateCallback() {
         @Override
         public void onOpened(CameraDevice camera) {
@@ -117,6 +123,13 @@ public class Camera2Impl implements ICamera2Api {
                 return;
             }
             mCaptureSession = session;
+
+            while (!mTaskQueue.isEmpty()){
+                Runnable task = mTaskQueue.poll();
+                if (task != null){
+                    task.run();
+                }
+            }
             if (mCameraListener != null){
                 mCameraListener.onSessionAvailable();
             }
@@ -141,8 +154,8 @@ public class Camera2Impl implements ICamera2Api {
 
     @Override
     public void init(int type) {
-        mCameraPreviewController = new CameraPreviewController(mContext,TAG);
-        mCameraImageController = new CameraImageController(mContext,TAG);
+        //mCameraPreviewController = new CameraPreviewController(mContext,TAG);
+        //mCameraImageController = new CameraImageController(mContext,TAG);
         mCameraRecordController = new CameraRecordController(mContext,TAG);
     }
 
@@ -212,7 +225,9 @@ public class Camera2Impl implements ICamera2Api {
         if (mCameraRecordController != null){
             mCameraRecordController.prepare(mCameraInfo);
         }
-        createSession();
+        if (!hasCreateSession){
+            createSession();
+        }
     }
 
 
@@ -237,14 +252,14 @@ public class Camera2Impl implements ICamera2Api {
             Log.e(TAG,"startPreview error, cameraDevice is null");
             return;
         }
-
-        if (mCaptureSession == null){
-            Log.e(TAG,"startPreview error, captureSession is null");
-            return;
-        }
-        if (mCameraPreviewController != null){
-            mCameraPreviewController.start(mCameraInfo,mCameraDevice,mCaptureSession);
-        }
+        sendTask(new Runnable() {
+            @Override
+            public void run() {
+                if (mCameraPreviewController != null){
+                    mCameraPreviewController.start(mCameraInfo,mCameraDevice,mCaptureSession);
+                }
+            }
+        });
     }
 
     @Override
@@ -268,6 +283,7 @@ public class Camera2Impl implements ICamera2Api {
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
+        closeSession();
     }
 
     @Override
@@ -276,15 +292,14 @@ public class Camera2Impl implements ICamera2Api {
             Log.e(TAG,"startImageCapture error, cameraDevice is null");
             return;
         }
-
-        if (mCaptureSession == null){
-            Log.e(TAG,"startImageCapture error, captureSession is null");
-            return;
-        }
-
-        if (mCameraImageController != null){
-            mCameraImageController.start(mCameraInfo,mCameraDevice,mCaptureSession);
-        }
+        sendTask(new Runnable() {
+            @Override
+            public void run() {
+                if (mCameraImageController != null){
+                    mCameraImageController.start(mCameraInfo,mCameraDevice,mCaptureSession);
+                }
+            }
+        });
     }
 
     @Override
@@ -293,19 +308,20 @@ public class Camera2Impl implements ICamera2Api {
             Log.e(TAG,"startPreview error, cameraDevice is null");
             return;
         }
-
-        if (mCaptureSession == null){
-            Log.e(TAG,"startPreview error, captureSession is null");
-            return;
-        }
-        if (mCameraRecordController != null){
-            mCameraRecordController.start(mCameraInfo,mCameraDevice,mCaptureSession);
-        }
+        sendTask(new Runnable() {
+            @Override
+            public void run() {
+                if (mCameraRecordController != null){
+                    mCameraRecordController.start(mCameraInfo,mCameraDevice,mCaptureSession);
+                }
+            }
+        });
     }
 
     @Override
     public void stopRecord() {
         mCameraRecordController.stop();
+        closeSession();
     }
 
     private boolean initCamera() {
@@ -418,13 +434,13 @@ public class Camera2Impl implements ICamera2Api {
         List<Surface> surfaceList = new ArrayList<>();
 
         if (mCameraPreviewController != null){
-            surfaceList.addAll(mCameraPreviewController.getSurfaces());
+            surfaceList.addAll(mCameraPreviewController.getSurfaces(mCameraInfo));
         }
         if (mCameraImageController != null){
-            surfaceList.addAll(mCameraImageController.getSurfaces());
+            surfaceList.addAll(mCameraImageController.getSurfaces(mCameraInfo));
         }
         if (mCameraRecordController != null){
-            surfaceList.addAll(mCameraRecordController.getSurfaces());
+            surfaceList.addAll(mCameraRecordController.getSurfaces(mCameraInfo));
         }
 
         try {
@@ -444,8 +460,18 @@ public class Camera2Impl implements ICamera2Api {
             } else {
                 mCameraDevice.createCaptureSession(surfaceList, mSessionStateCallback, mHandler);
             }
+            hasCreateSession = true;
         } catch (CameraAccessException e) {
             e.printStackTrace();
+        }
+    }
+
+    private void sendTask(Runnable task){
+        if (!hasCreateSession || mCaptureSession == null){
+            createSession();
+            mTaskQueue.add(task);
+        } else {
+            task.run();
         }
     }
 
@@ -457,6 +483,7 @@ public class Camera2Impl implements ICamera2Api {
     }
 
     private void closeSession(){
+        hasCreateSession = false;
         if (mCaptureSession != null){
             mCaptureSession.close();
             mCaptureSession = null;

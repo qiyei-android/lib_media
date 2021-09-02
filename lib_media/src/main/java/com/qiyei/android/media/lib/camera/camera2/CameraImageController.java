@@ -69,12 +69,13 @@ public class CameraImageController extends AbsCameraController{
 
     @Override
     public void stop() {
+        super.stop();
         mDeviceOrientationListener.disable();
     }
 
     @Override
     public void onImageCallBack(Image image) {
-        Log.i(mTag, subTag + "##### ImageAvailableListener onImageAvailable,planes=" + image.getPlanes());
+        //Log.i(mTag, subTag + "##### ImageAvailableListener onImageAvailable,planes=" + image.getPlanes());
         try {
             CaptureResult captureResult = mCaptureBlockingQueue.take();
             ByteBuffer buffer = null;
@@ -107,7 +108,7 @@ public class CameraImageController extends AbsCameraController{
         super.buildCaptureRequest(cameraInfo,cameraDevice);
         try {
             mCaptureRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
-            for (Surface surface : getSurfaces()){
+            for (Surface surface : getSurfaces(cameraInfo)){
                 mCaptureRequestBuilder.addTarget(surface);
             }
 

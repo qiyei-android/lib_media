@@ -56,14 +56,10 @@ public class CameraPreviewController extends AbsCameraController{
         sendCaptureRequest(cameraInfo,cameraDevice,captureSession,request);
     }
 
-    @Override
-    public void stop() {
-
-    }
 
     @Override
     public void onImageCallBack(Image image) {
-        Log.i(mTag, subTag + "##### ImageAvailableListener onImageAvailable,planes=" + image.getPlanes());
+        //Log.i(mTag, subTag + "##### ImageAvailableListener onImageAvailable,planes=" + image.getPlanes());
     }
 
     @Override
@@ -76,19 +72,11 @@ public class CameraPreviewController extends AbsCameraController{
         }
         if (mPreviewSurfaceTexture != null){
             mPreviewSurfaceTexture.setDefaultBufferSize(mSurfaceSize.getWidth(), mSurfaceSize.getHeight());
+            mPreviewSurface = new Surface(mPreviewSurfaceTexture);
         }
         mImageReader = buildImageReader(mTag, mSurfaceSize,ImageFormat.YUV_420_888,1);
     }
 
-    @Override
-    public List<Surface> getSurfaces() {
-        List<Surface> list = new ArrayList<>();
-        list.addAll(super.getSurfaces());
-        if (mPreviewSurfaceTexture != null){
-            list.add(new Surface(mPreviewSurfaceTexture));
-        }
-        return list;
-    }
 
     @Override
     protected CaptureRequest buildCaptureRequest(CameraInfo cameraInfo,CameraDevice cameraDevice) {
@@ -96,7 +84,7 @@ public class CameraPreviewController extends AbsCameraController{
         try {
             mCaptureRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
 
-            for (Surface surface : getSurfaces()){
+            for (Surface surface : getSurfaces(cameraInfo)){
                 mCaptureRequestBuilder.addTarget(surface);
             }
 

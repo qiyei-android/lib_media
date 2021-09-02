@@ -12,6 +12,8 @@ import android.util.Log;
 import android.util.Size;
 import android.view.Surface;
 
+import androidx.annotation.NonNull;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -46,26 +48,31 @@ public abstract class AbsCameraController implements ICamera{
     protected CaptureRequest.Builder mCaptureRequestBuilder;
 
     /**
-     * CaptureRequest请求
-     */
-    protected CameraCaptureSession mCaptureSession;
-
-    /**
      * surface尺寸
      */
     protected Size mSurfaceSize = new Size(1080,1920);
+
+    /**
+     * 预览Surface
+     */
+    protected Surface mPreviewSurface;
 
     /**
      * ImageReader
      */
     protected ImageReader mImageReader;
 
+    /**
+     * surface
+     */
+    protected List<Surface> mSurfaces;
+
 
     private ImageReader.OnImageAvailableListener mImageAvailableListener = new ImageReader.OnImageAvailableListener() {
         @Override
         public void onImageAvailable(ImageReader reader) {
             Image image = reader.acquireNextImage();
-            Log.v(mTag, subTag + "##### ImageAvailableListener onImageAvailable,planes.length=" + image.getPlanes().length);
+            //Log.v(mTag, subTag + "##### ImageAvailableListener onImageAvailable,planes.length=" + image.getPlanes().length);
             onImageCallBack(image);
             image.close();
         }
@@ -89,7 +96,10 @@ public abstract class AbsCameraController implements ICamera{
     @Override
     public void close() {
         mCaptureRequestBuilder = null;
-
+        if (mSurfaces != null){
+            mSurfaces.clear();
+            mSurfaces = null;
+        }
         if (mImageReader != null){
             mImageReader.close();
             mImageReader = null;
@@ -115,12 +125,25 @@ public abstract class AbsCameraController implements ICamera{
     }
 
     @Override
-    public List<Surface> getSurfaces() {
-        List<Surface> list = new ArrayList<>();
-        if (mImageReader != null){
-            list.add(mImageReader.getSurface());
+    public List<Surface> getSurfaces(CameraInfo cameraInfo) {
+        if (mSurfaces == null){
+            mSurfaces = new ArrayList<>();
+            if (mPreviewSurface != null){
+                mSurfaces.add(mPreviewSurface);
+            }
+            if (mImageReader != null){
+                mSurfaces.add(mImageReader.getSurface());
+            }
         }
-        return list;
+        return mSurfaces;
+    }
+
+    @Override
+    public void stop() {
+        if (mSurfaces != null){
+            mSurfaces.clear();
+            mSurfaces = null;
+        }
     }
 
     protected CaptureRequest buildCaptureRequest(CameraInfo cameraInfo, CameraDevice cameraDevice) {

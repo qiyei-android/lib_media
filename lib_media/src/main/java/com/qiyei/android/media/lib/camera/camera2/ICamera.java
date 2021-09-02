@@ -52,7 +52,7 @@ public interface ICamera {
      * 获取所有的surface
      * @return
      */
-    List<Surface> getSurfaces();
+    List<Surface> getSurfaces(CameraInfo cameraInfo);
 
     /**
      * 获取Handler
