@@ -1,27 +1,20 @@
 package com.qiyei.android.media.app.ui.activity;
 
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
-import android.graphics.SurfaceTexture;
 import android.media.Image;
 import android.os.Bundle;
-import android.util.Size;
-import android.view.TextureView;
-import android.view.View;
 
 import com.qiyei.android.media.api.ICamera2Api;
-import com.qiyei.android.media.api.IMediaCodecEncoder;
+import com.qiyei.android.media.api.IEncoder;
 import com.qiyei.android.media.app.R;
 import com.qiyei.android.media.lib.camera.camera2.Camera2Impl;
-
-import java.nio.ByteBuffer;
 
 public class H264MediaCodecDemoActivity extends AppCompatActivity {
 
     private ICamera2Api mCamera2Api;
 
-    private IMediaCodecEncoder mCodecEncoder;
+    private IEncoder mCodecEncoder;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

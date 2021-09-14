@@ -2,7 +2,7 @@ package com.qiyei.android.media.api;
 
 
 
-public interface IMediaCodecEncoder {
+public interface IEncoder {
 
     void setCallBack(CodecCallBack callBack);
 
