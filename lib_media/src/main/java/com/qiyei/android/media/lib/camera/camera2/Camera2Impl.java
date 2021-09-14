@@ -164,7 +164,7 @@ public class Camera2Impl implements ICamera2Api {
             }
         };
         //mCameraImageController = new CameraImageController(mContext,TAG);
-        mCameraRecordController = new CameraRecordController(mContext,TAG);
+        //mCameraRecordController = new CameraRecordController(mContext,TAG);
     }
 
     @Override

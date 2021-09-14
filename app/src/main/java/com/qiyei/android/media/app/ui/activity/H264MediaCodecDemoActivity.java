@@ -16,6 +16,7 @@ import com.qiyei.android.media.api.IEncoder;
 import com.qiyei.android.media.api.MediaUtils;
 import com.qiyei.android.media.app.R;
 import com.qiyei.android.media.lib.camera.camera2.Camera2Impl;
+import com.qiyei.android.media.lib.codec.H264MediaCodecAsyncEncoder;
 import com.qiyei.android.media.lib.codec.H264MediaCodecEncoder;
 
 import java.io.File;
@@ -113,9 +114,8 @@ public class H264MediaCodecDemoActivity extends AppCompatActivity {
 
     private void startMediaCodec(Image image){
         DateFormat dateFormat = new SimpleDateFormat("yyyyMMddHHmmssSSS", Locale.getDefault());
-
         if (mCodecEncoder == null){
-            mCodecEncoder = new H264MediaCodecEncoder(image.getWidth(),image.getHeight());
+            mCodecEncoder = new H264MediaCodecAsyncEncoder(image.getWidth(),image.getHeight());
             mCodecEncoder.setOutputPath(MediaUtils.getMediaStorePath() + File.separator + "mediacodec_" + dateFormat.format(System.currentTimeMillis()) + ".mp4");
             mCodecEncoder.start();
         }
@@ -144,7 +144,6 @@ public class H264MediaCodecDemoActivity extends AppCompatActivity {
         //获取到的数据拼接成nv21，需要转化成nv12，因为MediaCodec不支持nv21
         byte[] data = MediaUtils.nv21toNV12(nv21_rotated, nv12);
 
-        Log.i("HHH","mCodecEncoder = " + mCodecEncoder);
         mCodecEncoder.enqueueData(data);
     }
 
