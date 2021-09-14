@@ -15,54 +15,11 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.ArrayBlockingQueue;
 
-public class H264MediaCodecAsyncEncoder {
-
-    private volatile boolean isRunning = false;
-
-    /**
-     * 数据队列
-     */
-    private ArrayBlockingQueue<byte[]> mYUV420Queue;
-
-    /**
-     * 编解码器
-     */
-    private MediaCodec mMediaCodec;
-    /**
-     * 合成器
-     */
-    private MediaMuxer mMediaMuxer;
-
-    /**
-     * 轨道index
-     */
-    private int mTrackIndex;
-    /**
-     * 混合开始
-     */
-    private boolean isMuxerStart;
-
-    private CodecCallBack mCallBack;
-
-    private long prevOutputPTSUs;
-
+public class H264MediaCodecAsyncEncoder extends AbsMediaCodecEncoder{
 
     public H264MediaCodecAsyncEncoder(int width,int height) {
-        mYUV420Queue = new ArrayBlockingQueue<byte[]>(MediaConstant.BUFFER_SIZE);
-
-        MediaFormat mediaFormat = MediaFormat.createVideoFormat(MediaConstant.MIME_TYPE_VIDEO_AVC,width,height);
-        //YUV420
-        mediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Flexible);
-        //码率
-        mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE,width * height * 5);
-        //FPS 帧率
-        mediaFormat.setInteger(MediaFormat.KEY_FRAME_RATE,MediaConstant.VALUE_FRAME_RATE);
-        //I帧间隔
-        mediaFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1);
-
+        super(width,height);
         try {
-            mMediaCodec = MediaCodec.createEncoderByType(MediaConstant.MIME_TYPE_VIDEO_AVC);
-            mMediaCodec.configure(mediaFormat,null,null,MediaCodec.CONFIGURE_FLAG_ENCODE);
             mMediaCodec.setCallback(new MediaCodec.Callback() {
                 @Override
                 public void onInputBufferAvailable(@NonNull MediaCodec codec, int index) {
@@ -140,32 +97,17 @@ public class H264MediaCodecAsyncEncoder {
             });
 
             mMediaCodec.start();
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    public void setOutputPath(String outputPath){
-        try {
-            mMediaMuxer = new MediaMuxer(outputPath,MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        mTrackIndex = -1;
-        isMuxerStart = false;
-    }
-
-    public void enqueueData(byte[] buffer){
-        if (mYUV420Queue.size() >= MediaConstant.BUFFER_SIZE){
-            mYUV420Queue.poll();
-        }
-        mYUV420Queue.add(buffer);
-    }
-
+    @Override
     public void start(){
         isRunning = true;
     }
 
+    @Override
     public void stop(){
         if (mCallBack != null){
             mCallBack.onStop(MediaConstant.H264_ENCODER);
@@ -184,12 +126,5 @@ public class H264MediaCodecAsyncEncoder {
         } catch (Exception e) {
             e.printStackTrace();
         }
-    }
-
-    private long getPTSUs() {
-        long result = System.nanoTime() / 1000L;
-        // presentationTimeUs should be monotonic
-        // otherwise muxer fail to write
-        return Math.max(prevOutputPTSUs,result);
     }
 }

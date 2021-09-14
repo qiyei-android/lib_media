@@ -1,6 +1,8 @@
 package com.qiyei.android.media.api;
 
 import android.graphics.SurfaceTexture;
+import android.media.Image;
+import android.media.ImageReader;
 import android.util.Size;
 
 public interface ICamera2Api {
@@ -91,6 +93,12 @@ public interface ICamera2Api {
          * Session 可用
          */
         void onSessionAvailable();
+
+        /**
+         * Image 可用
+         * @param image
+         */
+        void onImageAvailable(Image image);
     }
 
 }
