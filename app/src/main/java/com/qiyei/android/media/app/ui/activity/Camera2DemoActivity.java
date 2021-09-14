@@ -4,6 +4,7 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.graphics.SurfaceTexture;
+import android.media.Image;
 import android.os.Bundle;
 import android.util.Size;
 import android.view.TextureView;
@@ -44,6 +45,11 @@ public class Camera2DemoActivity extends AppCompatActivity {
                     public void onSessionAvailable() {
                         isAvailable = true;
                         mCamera2Api.startPreview();
+                    }
+
+                    @Override
+                    public void onImageAvailable(Image image) {
+
                     }
                 });
 

@@ -12,6 +12,7 @@ import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.params.OutputConfiguration;
 import android.hardware.camera2.params.SessionConfiguration;
 import android.hardware.camera2.params.StreamConfigurationMap;
+import android.media.Image;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
@@ -154,7 +155,14 @@ public class Camera2Impl implements ICamera2Api {
 
     @Override
     public void init(int type) {
-        //mCameraPreviewController = new CameraPreviewController(mContext,TAG);
+        mCameraPreviewController = new CameraPreviewController(mContext,TAG){
+            @Override
+            public void onImageCallBack(Image image) {
+                if (mCameraListener != null){
+                    mCameraListener.onImageAvailable(image);
+                }
+            }
+        };
         //mCameraImageController = new CameraImageController(mContext,TAG);
         mCameraRecordController = new CameraRecordController(mContext,TAG);
     }
