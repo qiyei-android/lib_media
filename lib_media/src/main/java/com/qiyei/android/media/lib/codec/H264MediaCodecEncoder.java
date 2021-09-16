@@ -28,8 +28,11 @@ public class H264MediaCodecEncoder extends AbsMediaCodecEncoder{
             @Override
             public void run() {
                 while (isRunning){
+                    byte[] input = null;
                     Log.i("HHH","mYUV420Queue.size=" + mYUV420Queue.size());
-                    byte[] input = mYUV420Queue.poll();
+                    if (mYUV420Queue.size() > 0) {
+                        input = mYUV420Queue.poll();
+                    }
                     try {
                         if (input != null){
                             int inputBufferIndex = mMediaCodec.dequeueInputBuffer(MediaConstant.TIME_OUT);

@@ -1,8 +1,5 @@
 package com.qiyei.android.media.app.ui.activity;
 
-import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
-
 import android.graphics.SurfaceTexture;
 import android.media.Image;
 import android.os.Bundle;
@@ -11,22 +8,24 @@ import android.util.Size;
 import android.view.TextureView;
 import android.view.View;
 
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
+
 import com.qiyei.android.media.api.ICamera2Api;
 import com.qiyei.android.media.api.IEncoder;
+import com.qiyei.android.media.api.MediaConstant;
 import com.qiyei.android.media.api.MediaUtils;
 import com.qiyei.android.media.app.R;
-import com.qiyei.android.media.lib.YUVUtils;
 import com.qiyei.android.media.lib.camera.camera2.Camera2Impl;
 import com.qiyei.android.media.lib.codec.H264MediaCodecAsyncEncoder;
-import com.qiyei.android.media.lib.codec.H264MediaCodecEncoder;
+import com.qiyei.android.media.lib.codec.Mp4MediaCodecRecord;
 
 import java.io.File;
-import java.nio.ByteBuffer;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Locale;
 
-public class H264MediaCodecDemoActivity extends AppCompatActivity {
+public class H264MP4DemoActivity extends AppCompatActivity {
 
     private TextureView mTextureView;
 
@@ -108,11 +107,11 @@ public class H264MediaCodecDemoActivity extends AppCompatActivity {
     private void startMediaCodec(Image image){
         DateFormat dateFormat = new SimpleDateFormat("yyyyMMddHHmmssSSS", Locale.getDefault());
         if (mCodecEncoder == null){
-            mCodecEncoder = new H264MediaCodecAsyncEncoder(image.getWidth(),image.getHeight());
-            mCodecEncoder.setOutputPath(MediaUtils.getMediaStorePath() + File.separator + "mediacodec_" + dateFormat.format(System.currentTimeMillis()) + ".mp4");
+            mCodecEncoder = new Mp4MediaCodecRecord(image.getWidth(),image.getHeight(), MediaConstant.DEFAULT_SAMPLE_RATE_IN_HZ,MediaConstant.DEFAULT_CHANNEL_CONFIG,MediaUtils.getMediaStorePath() + File.separator + "mp4demo_" + dateFormat.format(System.currentTimeMillis()) + ".mp4");
+            //mCodecEncoder.setOutputPath();
             mCodecEncoder.start();
         }
-        byte[] data = MediaUtils.nv21ToYUV420(MediaUtils.convertToNV21(image),image.getWidth(),image.getHeight());
+        byte[] data = MediaUtils.convertToNV21(image);
 //        final Image.Plane[] planes = image.getPlanes();
 //        Image.Plane yPlane = planes[0];
 //        Image.Plane uPlane = planes[1];

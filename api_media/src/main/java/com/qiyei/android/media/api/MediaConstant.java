@@ -5,8 +5,9 @@ import android.media.MediaFormat;
 
 public interface MediaConstant {
 
-    String MIME_TYPE_VIDEO_AVC = "video/avc";
-    String MIMETYPE_AUDIO_AAC = "audio/mp4a-latm";
+    String MIME_TYPE_VIDEO_AVC = MediaFormat.MIMETYPE_VIDEO_AVC;
+
+    String MIME_TYPE_AUDIO_AAC = MediaFormat.MIMETYPE_AUDIO_AAC;
 
 
     int H264_ENCODER = 1;
@@ -29,4 +30,8 @@ public interface MediaConstant {
     int DEFAULT_ENCODING = AudioFormat.ENCODING_PCM_16BIT;
 
     int DEFAULT_BUFFER_SIZE_IN_BYTES = 4096;
+
+    int DEFAULT_AUDIO_BIT_RATE = 96000;
+
+    int ADTS_HEAD_LENGTH = 7;
 }
