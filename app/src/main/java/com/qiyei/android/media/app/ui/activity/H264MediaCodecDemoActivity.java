@@ -15,6 +15,7 @@ import com.qiyei.android.media.api.ICamera2Api;
 import com.qiyei.android.media.api.IEncoder;
 import com.qiyei.android.media.api.MediaUtils;
 import com.qiyei.android.media.app.R;
+import com.qiyei.android.media.lib.YUVUtils;
 import com.qiyei.android.media.lib.camera.camera2.Camera2Impl;
 import com.qiyei.android.media.lib.codec.H264MediaCodecAsyncEncoder;
 import com.qiyei.android.media.lib.codec.H264MediaCodecEncoder;
@@ -112,6 +113,14 @@ public class H264MediaCodecDemoActivity extends AppCompatActivity {
             mCodecEncoder.start();
         }
         byte[] data = MediaUtils.nv21ToYUV420(MediaUtils.convertToNV21(image),image.getWidth(),image.getHeight());
+//        final Image.Plane[] planes = image.getPlanes();
+//        Image.Plane yPlane = planes[0];
+//        Image.Plane uPlane = planes[1];
+//        Image.Plane vPlane = planes[2];
+//        byte[] data = YUVUtils.yuvToBuffer(yPlane.getBuffer(), uPlane.getBuffer(), vPlane.getBuffer(),
+//                yPlane.getPixelStride(), yPlane.getRowStride(), uPlane.getPixelStride(), uPlane.getRowStride(),
+//                vPlane.getPixelStride(), vPlane.getRowStride(), image.getWidth(), image.getHeight());
+
         mCodecEncoder.enqueueData(data);
         Log.d("MFB","startMediaCodec");
     }
