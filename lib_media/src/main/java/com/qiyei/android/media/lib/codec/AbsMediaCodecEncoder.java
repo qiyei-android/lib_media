@@ -4,12 +4,15 @@ import android.media.MediaCodec;
 import android.media.MediaCodecInfo;
 import android.media.MediaFormat;
 import android.media.MediaMuxer;
+import android.util.Log;
 
 import com.qiyei.android.media.api.CodecCallBack;
 import com.qiyei.android.media.api.IEncoder;
 import com.qiyei.android.media.api.MediaConstant;
 
 import java.io.IOException;
+import java.util.ArrayDeque;
+import java.util.LinkedList;
 import java.util.concurrent.ArrayBlockingQueue;
 
 public abstract class AbsMediaCodecEncoder extends AbsEncoder {
@@ -89,6 +92,7 @@ public abstract class AbsMediaCodecEncoder extends AbsEncoder {
             mYUV420Queue.poll();
         }
         mYUV420Queue.add(buffer);
+        Log.d("HHH","add mYUV420Queue.size=" + mYUV420Queue.size());
     }
 
 }

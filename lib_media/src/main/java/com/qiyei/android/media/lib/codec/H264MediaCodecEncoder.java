@@ -4,6 +4,7 @@ import android.media.MediaCodec;
 import android.media.MediaCodecInfo;
 import android.media.MediaFormat;
 import android.media.MediaMuxer;
+import android.util.Log;
 
 import com.qiyei.android.media.api.CodecCallBack;
 import com.qiyei.android.media.api.MediaConstant;
@@ -26,15 +27,13 @@ public class H264MediaCodecEncoder extends AbsMediaCodecEncoder{
         Executors.newFixedThreadPool(1).submit(new Runnable() {
             @Override
             public void run() {
-                byte[] input = null;
                 while (isRunning){
-                    if (!mYUV420Queue.isEmpty()){
-                        input = mYUV420Queue.poll();
-                    }
-
+                    Log.i("HHH","mYUV420Queue.size=" + mYUV420Queue.size());
+                    byte[] input = mYUV420Queue.poll();
                     try {
                         if (input != null){
                             int inputBufferIndex = mMediaCodec.dequeueInputBuffer(MediaConstant.TIME_OUT);
+                            Log.i("HHH","inputBufferIndex=" + inputBufferIndex);
                             if (inputBufferIndex >= 0){
                                 ByteBuffer inputBuffer = mMediaCodec.getInputBuffer(inputBufferIndex);
                                 inputBuffer.clear();
@@ -45,6 +44,7 @@ public class H264MediaCodecEncoder extends AbsMediaCodecEncoder{
                             MediaCodec.BufferInfo bufferInfo = new MediaCodec.BufferInfo();
 
                             int outputBufferIndex = mMediaCodec.dequeueOutputBuffer(bufferInfo,MediaConstant.TIME_OUT);
+                            Log.i("HHH","outputBufferIndex=" + outputBufferIndex);
                             if (outputBufferIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED){
                                 MediaFormat newFormat = mMediaCodec.getInputFormat();
                                 if (mCallBack != null){
@@ -74,6 +74,7 @@ public class H264MediaCodecEncoder extends AbsMediaCodecEncoder{
                                     outputBuffer.position(bufferInfo.offset);
                                     outputBuffer.limit(bufferInfo.offset + bufferInfo.size);
                                     // write encoded data to muxer(need to adjust presentationTimeUs.
+
                                     bufferInfo.presentationTimeUs = getPTSUs();
 
                                     if (mCallBack != null){
@@ -92,7 +93,9 @@ public class H264MediaCodecEncoder extends AbsMediaCodecEncoder{
                                 mMediaCodec.releaseOutputBuffer(outputBufferIndex,false);
                                 bufferInfo = new MediaCodec.BufferInfo();
                                 outputBufferIndex = mMediaCodec.dequeueOutputBuffer(bufferInfo,MediaConstant.TIME_OUT);
+                                Log.i("HHH","release after outputBufferIndex=" + outputBufferIndex);
                             }
+
                         }
                     } catch (RuntimeException e) {
                         e.printStackTrace();

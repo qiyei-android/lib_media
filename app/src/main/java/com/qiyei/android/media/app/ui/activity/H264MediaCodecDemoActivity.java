@@ -35,14 +35,6 @@ public class H264MediaCodecDemoActivity extends AppCompatActivity {
 
     private IEncoder mCodecEncoder;
 
-    private byte[] y;
-    private byte[] u;
-    private byte[] v;
-
-    private byte[] nv21;//width  height
-    byte[] nv21_rotated;
-    byte[] nv12;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -115,36 +107,13 @@ public class H264MediaCodecDemoActivity extends AppCompatActivity {
     private void startMediaCodec(Image image){
         DateFormat dateFormat = new SimpleDateFormat("yyyyMMddHHmmssSSS", Locale.getDefault());
         if (mCodecEncoder == null){
-            mCodecEncoder = new H264MediaCodecAsyncEncoder(image.getWidth(),image.getHeight());
+            mCodecEncoder = new H264MediaCodecEncoder(image.getWidth(),image.getHeight());
             mCodecEncoder.setOutputPath(MediaUtils.getMediaStorePath() + File.separator + "mediacodec_" + dateFormat.format(System.currentTimeMillis()) + ".mp4");
             mCodecEncoder.start();
         }
-
-        Image.Plane[] planes =  image.getPlanes();
-        // 重复使用同一批byte数组，减少gc频率
-        if (y == null) {
-            y = new byte[planes[0].getBuffer().limit() - planes[0].getBuffer().position()];
-            u = new byte[planes[1].getBuffer().limit() - planes[1].getBuffer().position()];
-            v = new byte[planes[2].getBuffer().limit() - planes[2].getBuffer().position()];
-        }
-        if (image.getPlanes()[0].getBuffer().remaining() == y.length) {
-            planes[0].getBuffer().get(y);
-            planes[1].getBuffer().get(u);
-            planes[2].getBuffer().get(v);
-        }
-
-        if (nv21 == null) {
-            nv21 = new byte[planes[0].getRowStride() * image.getHeight() * 3 / 2];
-            nv21_rotated = new byte[planes[0].getRowStride() * image.getHeight() * 3 / 2];
-        }
-
-        MediaUtils.yuvToNv21(y, u, v, nv21, planes[0].getRowStride(), image.getHeight());
-        MediaUtils.nv21_rotate_to_90(nv21, nv21_rotated, planes[0].getRowStride(), image.getHeight());
-
-        //获取到的数据拼接成nv21，需要转化成nv12，因为MediaCodec不支持nv21
-        byte[] data = MediaUtils.nv21toNV12(nv21_rotated, nv12);
-
+        byte[] data = MediaUtils.nv21ToYUV420(MediaUtils.convertToNV21(image),image.getWidth(),image.getHeight());
         mCodecEncoder.enqueueData(data);
+        Log.d("MFB","startMediaCodec");
     }
 
     @Override
