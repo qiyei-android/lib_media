@@ -77,6 +77,7 @@ public abstract class AbsMediaCodecEncoder extends AbsEncoder {
 
     @Override
     public void setOutputPath(String outputPath) {
+        Log.i(MediaConstant.H264_TAG,getTag() + "setOutputPath=" + outputPath);
         try {
             mMediaMuxer = new MediaMuxer(outputPath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4);
         } catch (IOException e) {
@@ -92,9 +93,10 @@ public abstract class AbsMediaCodecEncoder extends AbsEncoder {
             mYUV420Queue.poll();
         }
         mYUV420Queue.add(buffer);
-        Log.d("HHH","add mYUV420Queue.size=" + mYUV420Queue.size());
+        Log.d(MediaConstant.H264_TAG,getTag() + "add mYUV420Queue.size=" + mYUV420Queue.size());
     }
 
+    protected abstract String getTag();
 }
 
 

@@ -12,12 +12,7 @@ import com.qiyei.android.media.lib.codec.Mp4MediaCodecRecord;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-/**
- * @author feibiao.ma
- * @project BlogDemo
- * @package_name com.poney.blogdemo.base.audio
- * @date 2021/1/8
- */
+
 public class AudioRecordLoader {
     private boolean mIsRecording;
     private AudioRecord mAudioRecord;

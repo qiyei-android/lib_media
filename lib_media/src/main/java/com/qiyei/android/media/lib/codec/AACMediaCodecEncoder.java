@@ -112,6 +112,7 @@ public class AACMediaCodecEncoder extends AbsEncoder{
                             if (inputBufferIndex >= 0){
                                 ByteBuffer inputBuffer = mMediaCodec.getInputBuffer(inputBufferIndex);
                                 inputBuffer.clear();
+                                inputBuffer.limit(input.length);
                                 inputBuffer.put(input);
                                 mMediaCodec.queueInputBuffer(inputBufferIndex,0,input.length,getPTSUs(),0);
                             }

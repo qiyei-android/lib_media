@@ -22,7 +22,7 @@ public class Mp4MediaCodecRecord implements IEncoder,CodecCallBack {
 
     private AudioRecordLoader mAACMediaCodecEncoder;
 
-    private H264MediaCodecEncoder mH264MediaCodecEncoder;
+    private IEncoder mH264MediaCodecEncoder;
 
     private MediaMuxer mMediaMuxer;
 

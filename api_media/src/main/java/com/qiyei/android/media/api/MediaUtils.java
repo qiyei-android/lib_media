@@ -31,16 +31,12 @@ public class MediaUtils {
         Image.Plane[] planes = image.getPlanes();
 
         byte[] data = new byte[width * height * ImageFormat.getBitsPerPixel(format) / 8];
+        byte[] rowData = new byte[planes[0].getRowStride()];
 
-        Image.Plane yPlane = planes[0];
-
-        byte[] rowData = new byte[yPlane.getRowStride()];
         int channelOffset = 0;
         int outputStride = 1;
-        int i = 0;
 
-
-        for(int size = planes.length; i < size; ++i) {
+        for(int i = 0; i < planes.length; ++i) {
             switch(i) {
                 case 0:
                     channelOffset = 0;
@@ -55,23 +51,17 @@ public class MediaUtils {
                     outputStride = 2;
             }
 
-            yPlane = planes[i];
+            ByteBuffer buffer = planes[i].getBuffer();
+            int rowStride = planes[i].getRowStride();
+            int pixelStride = planes[i].getPixelStride();
 
-            ByteBuffer buffer = yPlane.getBuffer();
-
-            yPlane = planes[i];
-
-            int rowStride = yPlane.getRowStride();
-            yPlane = planes[i];
-
-            int pixelStride = yPlane.getPixelStride();
-            int shift = i == 0 ? 0 : 1;
+            int shift = (i == 0 ? 0 : 1);
             int w = width >> shift;
             int h = height >> shift;
             buffer.position(rowStride * (crop.top >> shift) + pixelStride * (crop.left >> shift));
-            int row = 0;
 
-            for(int j = h; row < j; ++row) {
+
+            for(int j = 0; j < h; j++) {
                 int length;
                 if (pixelStride == 1 && outputStride == 1) {
                     length = w;
@@ -80,15 +70,14 @@ public class MediaUtils {
                 } else {
                     length = (w - 1) * pixelStride + 1;
                     buffer.get(rowData, 0, length);
-                    int col = 0;
 
-                    for(int var22 = w; col < var22; ++col) {
-                        data[channelOffset] = rowData[col * pixelStride];
+                    for(int k = 0; k < w; k++) {
+                        data[channelOffset] = rowData[k * pixelStride];
                         channelOffset += outputStride;
                     }
                 }
 
-                if (row < h - 1) {
+                if (j < h - 1) {
                     buffer.position(buffer.position() + rowStride - length);
                 }
             }

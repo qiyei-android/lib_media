@@ -5,6 +5,8 @@ import android.media.MediaFormat;
 
 public interface MediaConstant {
 
+    String H264_TAG = "[H264]";
+
     String MIME_TYPE_VIDEO_AVC = MediaFormat.MIMETYPE_VIDEO_AVC;
 
     String MIME_TYPE_AUDIO_AAC = MediaFormat.MIMETYPE_AUDIO_AAC;
@@ -16,7 +18,7 @@ public interface MediaConstant {
 
     int VALUE_FRAME_RATE = 60;
 
-    int BUFFER_SIZE = 10;
+    int BUFFER_SIZE = 20;
 
     int TIME_OUT = 10000;
 

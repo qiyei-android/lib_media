@@ -23,20 +23,20 @@ public class H264MediaCodecEncoder extends AbsMediaCodecEncoder{
 
     public void start(){
         isRunning = true;
-
+        Log.i(MediaConstant.H264_TAG,getTag() + "start");
         Executors.newFixedThreadPool(1).submit(new Runnable() {
             @Override
             public void run() {
                 while (isRunning){
                     byte[] input = null;
-                    Log.i("HHH","mYUV420Queue.size=" + mYUV420Queue.size());
+                    Log.i(MediaConstant.H264_TAG,getTag() + "run mYUV420Queue.size=" + mYUV420Queue.size());
                     if (mYUV420Queue.size() > 0) {
                         input = mYUV420Queue.poll();
                     }
                     try {
                         if (input != null){
                             int inputBufferIndex = mMediaCodec.dequeueInputBuffer(MediaConstant.TIME_OUT);
-                            Log.i("HHH","inputBufferIndex=" + inputBufferIndex);
+                            Log.i(MediaConstant.H264_TAG,getTag() + "run inputBufferIndex=" + inputBufferIndex);
                             if (inputBufferIndex >= 0){
                                 ByteBuffer inputBuffer = mMediaCodec.getInputBuffer(inputBufferIndex);
                                 inputBuffer.clear();
@@ -47,7 +47,7 @@ public class H264MediaCodecEncoder extends AbsMediaCodecEncoder{
                             MediaCodec.BufferInfo bufferInfo = new MediaCodec.BufferInfo();
 
                             int outputBufferIndex = mMediaCodec.dequeueOutputBuffer(bufferInfo,MediaConstant.TIME_OUT);
-                            Log.i("HHH","outputBufferIndex=" + outputBufferIndex);
+                            Log.i(MediaConstant.H264_TAG,getTag() + "run outputBufferIndex=" + outputBufferIndex);
                             if (outputBufferIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED){
                                 MediaFormat newFormat = mMediaCodec.getInputFormat();
                                 if (mCallBack != null){
@@ -96,9 +96,15 @@ public class H264MediaCodecEncoder extends AbsMediaCodecEncoder{
                                 mMediaCodec.releaseOutputBuffer(outputBufferIndex,false);
                                 bufferInfo = new MediaCodec.BufferInfo();
                                 outputBufferIndex = mMediaCodec.dequeueOutputBuffer(bufferInfo,MediaConstant.TIME_OUT);
-                                Log.i("HHH","release after outputBufferIndex=" + outputBufferIndex);
+                                Log.i(MediaConstant.H264_TAG,getTag() + "run release after outputBufferIndex=" + outputBufferIndex);
                             }
 
+                        } else {
+                            try {
+                                Thread.sleep(200);
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
                         }
                     } catch (RuntimeException e) {
                         e.printStackTrace();
@@ -108,7 +114,9 @@ public class H264MediaCodecEncoder extends AbsMediaCodecEncoder{
         });
     }
 
+    @Override
     public void stop(){
+        Log.i(MediaConstant.H264_TAG,getTag() + "stop");
         if (mCallBack != null){
             mCallBack.onStop(MediaConstant.H264_ENCODER);
         }
@@ -128,4 +136,8 @@ public class H264MediaCodecEncoder extends AbsMediaCodecEncoder{
         }
     }
 
+    @Override
+    protected String getTag() {
+        return "h264 mediacodec sync ";
+    }
 }
