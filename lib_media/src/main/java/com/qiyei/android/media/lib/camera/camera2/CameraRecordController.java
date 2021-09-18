@@ -148,6 +148,7 @@ public class CameraRecordController extends AbsCameraController{
         super.buildCaptureRequest(cameraInfo,cameraDevice);
         try {
             mCaptureRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_RECORD);
+            setCameraAutoMode(cameraInfo,mCaptureRequestBuilder);
             for (Surface surface : getSurfaces(cameraInfo)){
                 mCaptureRequestBuilder.addTarget(surface);
             }

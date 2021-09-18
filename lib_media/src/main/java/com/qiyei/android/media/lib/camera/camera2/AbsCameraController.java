@@ -9,6 +9,7 @@ import android.media.ImageReader;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.util.Log;
+import android.util.Range;
 import android.util.Size;
 import android.view.Surface;
 
@@ -169,4 +170,8 @@ public abstract class AbsCameraController implements ICamera{
         return imageReader;
     }
 
+    protected void setCameraAutoMode(CameraInfo cameraInfo ,CaptureRequest.Builder builder){
+        builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+        builder.set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE,cameraInfo.mFpsRange);
+    }
 }

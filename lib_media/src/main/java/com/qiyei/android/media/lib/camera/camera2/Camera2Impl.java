@@ -364,13 +364,27 @@ public class Camera2Impl implements ICamera2Api {
                 if (facing == null) {
                     continue;
                 }
+                Range<Integer>[] ranges = characteristics.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES);
 
+                Range<Integer> result = null;
+
+                for (Range<Integer> range : ranges) {
+                    //帧率不能太低，大于10
+                    if (range.getLower()<10)
+                        continue;
+                    if (result==null)
+                        result = range;
+                        //FPS下限小于15，弱光时能保证足够曝光时间，提高亮度。range范围跨度越大越好，光源足够时FPS较高，预览更流畅，光源不够时FPS较低，亮度更好。
+                    else if (range.getLower()<=15 && (range.getUpper()-range.getLower())>(result.getUpper()-result.getLower()))
+                        result = range;
+                }
                 CameraInfo info = new CameraInfo();
                 info.cameraId = cameraId;
                 info.characteristics = characteristics;
                 info.level = level;
                 info.facing = facing;
                 info.map = map;
+                info.mFpsRange = result;
 
                 mCameraMap.put(cameraId, info);
             }

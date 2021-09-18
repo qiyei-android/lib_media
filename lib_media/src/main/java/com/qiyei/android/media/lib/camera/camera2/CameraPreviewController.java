@@ -83,7 +83,7 @@ public class CameraPreviewController extends AbsCameraController{
         super.buildCaptureRequest(cameraInfo,cameraDevice);
         try {
             mCaptureRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
-
+            setCameraAutoMode(cameraInfo,mCaptureRequestBuilder);
             for (Surface surface : getSurfaces(cameraInfo)){
                 mCaptureRequestBuilder.addTarget(surface);
             }
