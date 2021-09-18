@@ -16,9 +16,10 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class AACMediaCodecEncoder extends AbsEncoder{
+public class AACMediaCodecEncoder extends AbsEncoder {
 
     private volatile boolean isRunning = false;
 
@@ -29,7 +30,8 @@ public class AACMediaCodecEncoder extends AbsEncoder{
 
     private MediaCodec mMediaCodec;
 
-    private ArrayBlockingQueue<byte[]> mPcmQueue = new ArrayBlockingQueue<>(MediaConstant.BUFFER_SIZE);
+    private ArrayBlockingQueue<byte[]> mPcmQueue = new ArrayBlockingQueue<>(10);
+
     /**
      *
      */
@@ -38,7 +40,7 @@ public class AACMediaCodecEncoder extends AbsEncoder{
     /**
      * 回调
      */
-    protected CodecCallBack mCallBack;
+    private volatile CodecCallBack mCallBack;
 
 
     public AACMediaCodecEncoder(int sampleRateInHz, int channelConfig) {
@@ -46,8 +48,8 @@ public class AACMediaCodecEncoder extends AbsEncoder{
         MediaFormat mediaFormat = MediaFormat.createAudioFormat(MediaConstant.MIME_TYPE_AUDIO_AAC,sampleRateInHz, channelConfig == AudioFormat.CHANNEL_OUT_MONO ? 1 : 2);
 
         //声音中的比特率是指将模拟声音信号转换成数字声音信号后，单位时间内的二进制数据量，是间接衡量音频质量的一个指标
-        mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE,MediaConstant.DEFAULT_AUDIO_BIT_RATE);
-        mediaFormat.setInteger(MediaFormat.KEY_MAX_INPUT_SIZE, AudioRecord.getMinBufferSize(MediaConstant.DEFAULT_BUFFER_SIZE_IN_BYTES, MediaConstant.DEFAULT_CHANNEL_CONFIG, MediaConstant.DEFAULT_ENCODING));
+        mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE,96000);
+        mediaFormat.setInteger(MediaFormat.KEY_MAX_INPUT_SIZE, AudioRecord.getMinBufferSize(MediaConstant.DEFAULT_SAMPLE_RATE_IN_HZ, MediaConstant.DEFAULT_CHANNEL_CONFIG, MediaConstant.DEFAULT_ENCODING));
         mediaFormat.setInteger(MediaFormat.KEY_CHANNEL_COUNT, channelConfig == AudioFormat.CHANNEL_OUT_MONO ? 1 : 2);
 
         try {
@@ -66,6 +68,7 @@ public class AACMediaCodecEncoder extends AbsEncoder{
 
     @Override
     public void setOutputPath(String outputPath) {
+        Log.i(MediaConstant.H264_TAG,getTag() + "setOutputPath=" + outputPath);
         if (TextUtils.isEmpty(outputPath)){
             return;
         }
@@ -89,28 +92,33 @@ public class AACMediaCodecEncoder extends AbsEncoder{
             mPcmQueue.poll();
         }
         mPcmQueue.add(buffer);
-        Log.d("HHH","add mPcmQueue.size=" + mPcmQueue.size());
+        Log.d(MediaConstant.H264_TAG,getTag() + "add mPcmQueue.size=" + mPcmQueue.size());
     }
 
     @Override
     public void start() {
         isRunning = true;
-
-        Executors.newFixedThreadPool(1).submit(new Runnable() {
+        ExecutorService executorService = Executors.newSingleThreadExecutor();
+        executorService.execute(new Runnable() {
             @Override
             public void run() {
+                byte[] input = null;
                 byte[] aacChunk;
                 while (isRunning){
-                    byte[] input = null;
                     if (mPcmQueue.size() > 0){
                         input = mPcmQueue.poll();
                     }
-                    try {
-                        if (input != null){
+                    if (input != null){
+                        try {
                             int inputBufferIndex = mMediaCodec.dequeueInputBuffer(MediaConstant.TIME_OUT);
-                            Log.i("HHH","inputBufferIndex=" + inputBufferIndex);
-                            if (inputBufferIndex >= 0){
-                                ByteBuffer inputBuffer = mMediaCodec.getInputBuffer(inputBufferIndex);
+                            if (inputBufferIndex >= 0) {
+
+                                ByteBuffer inputBuffer = null;
+                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+                                    inputBuffer = mMediaCodec.getInputBuffer(inputBufferIndex);
+                                } else {
+                                    inputBuffer = mMediaCodec.getInputBuffers()[inputBufferIndex];
+                                }
                                 inputBuffer.clear();
                                 inputBuffer.limit(input.length);
                                 inputBuffer.put(input);
@@ -120,9 +128,9 @@ public class AACMediaCodecEncoder extends AbsEncoder{
                             MediaCodec.BufferInfo bufferInfo = new MediaCodec.BufferInfo();
 
                             int outputBufferIndex = mMediaCodec.dequeueOutputBuffer(bufferInfo,MediaConstant.TIME_OUT);
-                            Log.i("HHH","outputBufferIndex=" + outputBufferIndex);
+                            Log.i(MediaConstant.H264_TAG,getTag() + "outputBufferIndex=" + outputBufferIndex);
                             if (outputBufferIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED){
-                                MediaFormat newFormat = mMediaCodec.getInputFormat();
+                                MediaFormat newFormat = mMediaCodec.getOutputFormat();
                                 if (mCallBack != null){
                                     mCallBack.outputMediaFormatChanged(MediaConstant.AAC_ENCODER,newFormat);
                                 }
@@ -130,8 +138,11 @@ public class AACMediaCodecEncoder extends AbsEncoder{
 
                             while (outputBufferIndex >= 0){
                                 ByteBuffer outputBuffer = null;
-                                outputBuffer = mMediaCodec.getOutputBuffer(outputBufferIndex);
-                                //编码配置
+                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+                                    outputBuffer = mMediaCodec.getOutputBuffer(outputBufferIndex);
+                                } else {
+                                    outputBuffer = mMediaCodec.getOutputBuffers()[outputBufferIndex];
+                                }
                                 if (bufferInfo.flags == MediaCodec.BUFFER_FLAG_CODEC_CONFIG){
                                     bufferInfo.size = 0;
                                 }
@@ -165,24 +176,39 @@ public class AACMediaCodecEncoder extends AbsEncoder{
                                 mMediaCodec.releaseOutputBuffer(outputBufferIndex,false);
                                 bufferInfo = new MediaCodec.BufferInfo();
                                 outputBufferIndex = mMediaCodec.dequeueOutputBuffer(bufferInfo,MediaConstant.TIME_OUT);
-                                Log.i("HHH","release after outputBufferIndex=" + outputBufferIndex);
+                                Log.i(MediaConstant.H264_TAG,getTag() + "release after outputBufferIndex=" + outputBufferIndex);
                             }
-
+                        } catch (RuntimeException e) {
+                            e.printStackTrace();
                         }
-                    } catch (RuntimeException e) {
-                        e.printStackTrace();
+
+                    } else {
+                        try {
+                            Thread.sleep(500);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
                     }
+                }
+                try {
+                    if (mBufferedOutputStream != null) {
+                        mBufferedOutputStream.flush();
+                        mBufferedOutputStream.close();
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
                 }
             }
         });
     }
 
+
     @Override
     public void stop() {
-        if (mCallBack != null){
+        if (mCallBack != null) {
+            //回调
             mCallBack.onStop(MediaConstant.AAC_ENCODER);
         }
-
         isRunning = false;
         try {
             mMediaCodec.stop();
@@ -191,6 +217,11 @@ public class AACMediaCodecEncoder extends AbsEncoder{
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    @Override
+    protected String getTag() {
+        return "h264 AAC ";
     }
 
     private void addADTStoPacket(int sampleRateInHz, byte[] packet, int packetLen) {

@@ -16,9 +16,9 @@ public interface MediaConstant {
 
     int AAC_ENCODER = 2;
 
-    int VALUE_FRAME_RATE = 60;
+    int VALUE_FRAME_RATE = 30;
 
-    int BUFFER_SIZE = 20;
+    int BUFFER_SIZE = 10;
 
     int TIME_OUT = 10000;
 

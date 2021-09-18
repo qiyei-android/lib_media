@@ -27,8 +27,8 @@ public class H264MediaCodecEncoder extends AbsMediaCodecEncoder{
         Executors.newFixedThreadPool(1).submit(new Runnable() {
             @Override
             public void run() {
+                byte[] input = null;
                 while (isRunning){
-                    byte[] input = null;
                     Log.i(MediaConstant.H264_TAG,getTag() + "run mYUV420Queue.size=" + mYUV420Queue.size());
                     if (mYUV420Queue.size() > 0) {
                         input = mYUV420Queue.poll();
@@ -49,7 +49,7 @@ public class H264MediaCodecEncoder extends AbsMediaCodecEncoder{
                             int outputBufferIndex = mMediaCodec.dequeueOutputBuffer(bufferInfo,MediaConstant.TIME_OUT);
                             Log.i(MediaConstant.H264_TAG,getTag() + "run outputBufferIndex=" + outputBufferIndex);
                             if (outputBufferIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED){
-                                MediaFormat newFormat = mMediaCodec.getInputFormat();
+                                MediaFormat newFormat = mMediaCodec.getOutputFormat();
                                 if (mCallBack != null){
                                     mCallBack.outputMediaFormatChanged(MediaConstant.H264_ENCODER,newFormat);
                                 }
@@ -61,6 +61,7 @@ public class H264MediaCodecEncoder extends AbsMediaCodecEncoder{
                                     mTrackIndex = mMediaMuxer.addTrack(newFormat);
                                     mMediaMuxer.start();
                                     isMuxerStart = true;
+                                    Log.i(MediaConstant.H264_TAG,getTag() + "run MediaMuxer.start mTrackIndex=" + mTrackIndex);
                                 }
                             }
 
@@ -89,6 +90,7 @@ public class H264MediaCodecEncoder extends AbsMediaCodecEncoder{
                                         if (!isMuxerStart){
                                             throw new RuntimeException("muxer hasn't started");
                                         }
+                                        Log.i(MediaConstant.H264_TAG,getTag() + "run writeSampleData mTrackIndex=" + mTrackIndex);
                                         mMediaMuxer.writeSampleData(mTrackIndex,outputBuffer,bufferInfo);
                                     }
                                 }
@@ -101,7 +103,7 @@ public class H264MediaCodecEncoder extends AbsMediaCodecEncoder{
 
                         } else {
                             try {
-                                Thread.sleep(200);
+                                Thread.sleep(500);
                             } catch (InterruptedException e) {
                                 e.printStackTrace();
                             }

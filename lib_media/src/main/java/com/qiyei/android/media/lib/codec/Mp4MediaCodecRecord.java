@@ -22,7 +22,7 @@ public class Mp4MediaCodecRecord implements IEncoder,CodecCallBack {
 
     private AudioRecordLoader mAACMediaCodecEncoder;
 
-    private IEncoder mH264MediaCodecEncoder;
+    private H264MediaCodecEncoder mH264MediaCodecEncoder;
 
     private MediaMuxer mMediaMuxer;
 
@@ -65,7 +65,7 @@ public class Mp4MediaCodecRecord implements IEncoder,CodecCallBack {
                 if (type == MediaConstant.AAC_ENCODER) {
                     mAudioTrackIndex = mMediaMuxer.addTrack(mediaFormat);
                 }
-
+                Log.i(MediaConstant.H264_TAG,getTag() + "outputMediaFormatChanged mVideoTrackIndex=" + mVideoTrackIndex + " mAudioTrackIndex=" + mAudioTrackIndex);
                 if (mVideoTrackIndex == -1 || mAudioTrackIndex == -1) {
                     mLock.wait();
                 } else {
@@ -102,6 +102,7 @@ public class Mp4MediaCodecRecord implements IEncoder,CodecCallBack {
             if (type == MediaConstant.AAC_ENCODER) {
                 mHasStopAudio = true;
             }
+            Log.i(MediaConstant.H264_TAG,getTag() + "onStop mHasStopAudio=" + mHasStopAudio + " mHasStopVideo=" + mHasStopVideo + " mHasStartMuxer=" + mHasStartMuxer);
             if (mHasStopAudio && mHasStopVideo && mHasStartMuxer) {
                 mHasStartMuxer = false;
                 mMediaMuxer.stop();
@@ -136,5 +137,9 @@ public class Mp4MediaCodecRecord implements IEncoder,CodecCallBack {
         mAACMediaCodecEncoder.stop();
         mH264MediaCodecEncoder.stop();
         mIsRecoding = false;
+    }
+
+    private String getTag(){
+        return "MP4 Codec ";
     }
 }

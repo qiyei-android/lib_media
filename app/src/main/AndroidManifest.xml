@@ -16,6 +16,8 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Lib_media">
         <activity
+            android:name=".ui.activity.Mp4MediaCodecDemoActivity" />
+        <activity
             android:name=".ui.activity.H264MP4DemoActivity"
             android:exported="true" />
         <activity

@@ -95,8 +95,6 @@ public abstract class AbsMediaCodecEncoder extends AbsEncoder {
         mYUV420Queue.add(buffer);
         Log.d(MediaConstant.H264_TAG,getTag() + "add mYUV420Queue.size=" + mYUV420Queue.size());
     }
-
-    protected abstract String getTag();
 }
 
 

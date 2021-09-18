@@ -108,11 +108,11 @@ public class H264MediaCodecDemoActivity extends AppCompatActivity {
     private void startMediaCodec(Image image){
         DateFormat dateFormat = new SimpleDateFormat("yyyyMMddHHmmssSSS", Locale.getDefault());
         if (mCodecEncoder == null){
-            mCodecEncoder = new H264MediaCodecAsyncEncoder(image.getWidth(),image.getHeight());
+            mCodecEncoder = new H264MediaCodecEncoder(image.getWidth(),image.getHeight());
             mCodecEncoder.setOutputPath(MediaUtils.getMediaStorePath() + File.separator + "mediacodec_" + dateFormat.format(System.currentTimeMillis()) + ".mp4");
             mCodecEncoder.start();
         }
-        byte[] data = MediaUtils.nv21ToYUV420(MediaUtils.convertToNV21(image),image.getWidth(),image.getHeight());
+        byte[] data = MediaUtils.convertToNV21(image);
 //        final Image.Plane[] planes = image.getPlanes();
 //        Image.Plane yPlane = planes[0];
 //        Image.Plane uPlane = planes[1];
