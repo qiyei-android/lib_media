@@ -112,7 +112,7 @@ public class H264MediaCodecDemoActivity extends AppCompatActivity {
             mCodecEncoder.setOutputPath(MediaUtils.getMediaStorePath() + File.separator + "mediacodec_" + dateFormat.format(System.currentTimeMillis()) + ".mp4");
             mCodecEncoder.start();
         }
-        byte[] data = MediaUtils.convertToNV21(image);
+        byte[] data = MediaUtils.nv21ToYUV420(MediaUtils.convertToNV21(image),image.getWidth(),image.getHeight());
 //        final Image.Plane[] planes = image.getPlanes();
 //        Image.Plane yPlane = planes[0];
 //        Image.Plane uPlane = planes[1];
