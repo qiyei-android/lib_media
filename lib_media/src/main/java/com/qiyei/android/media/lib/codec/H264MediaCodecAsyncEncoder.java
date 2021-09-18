@@ -23,20 +23,21 @@ public class H264MediaCodecAsyncEncoder extends AbsMediaCodecEncoder{
             mMediaCodec.setCallback(new MediaCodec.Callback() {
                 @Override
                 public void onInputBufferAvailable(@NonNull MediaCodec codec, int index) {
+                    ByteBuffer inputBuffer = codec.getInputBuffer(index);
+                    inputBuffer.clear();
                     byte[] input = null;
+                    int length = 0;
                     if (isRunning){
                         if (!mYUV420Queue.isEmpty()){
                             input = mYUV420Queue.poll();
                         }
                         Log.i(MediaConstant.H264_TAG,getTag() + "run onInputBufferAvailable,index=" + index + " input=" + input);
                         if (input != null){
-                            ByteBuffer inputBuffer = codec.getInputBuffer(index);
-                            inputBuffer.clear();
                             inputBuffer.put(input);
-                            codec.queueInputBuffer(index,0,input.length,getPTSUs(),0);
+                            length = input.length;
                         }
                     }
-
+                    codec.queueInputBuffer(index,0,length,getPTSUs(),0);
                 }
 
                 @Override

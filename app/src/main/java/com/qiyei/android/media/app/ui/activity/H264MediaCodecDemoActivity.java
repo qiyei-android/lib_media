@@ -108,7 +108,7 @@ public class H264MediaCodecDemoActivity extends AppCompatActivity {
     private void startMediaCodec(Image image){
         DateFormat dateFormat = new SimpleDateFormat("yyyyMMddHHmmssSSS", Locale.getDefault());
         if (mCodecEncoder == null){
-            mCodecEncoder = new H264MediaCodecEncoder(image.getWidth(),image.getHeight());
+            mCodecEncoder = new H264MediaCodecAsyncEncoder(image.getWidth(),image.getHeight());
             mCodecEncoder.setOutputPath(MediaUtils.getMediaStorePath() + File.separator + "mediacodec_" + dateFormat.format(System.currentTimeMillis()) + ".mp4");
             mCodecEncoder.start();
         }
