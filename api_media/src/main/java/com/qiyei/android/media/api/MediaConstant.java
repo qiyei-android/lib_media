@@ -36,4 +36,8 @@ public interface MediaConstant {
     int DEFAULT_AUDIO_BIT_RATE = 96000;
 
     int ADTS_HEAD_LENGTH = 7;
+
+    String MIME_VIDEO_PREFIX = "video";
+
+    String MIME_AUDIO_PREFIX = "audio";
 }

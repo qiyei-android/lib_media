@@ -10,6 +10,7 @@ import com.qiyei.android.media.app.ui.activity.Camera1DemoActivity;
 import com.qiyei.android.media.app.ui.activity.Camera2DemoActivity;
 import com.qiyei.android.media.app.ui.activity.H264MP4DemoActivity;
 import com.qiyei.android.media.app.ui.activity.H264MediaCodecDemoActivity;
+import com.qiyei.android.media.app.ui.activity.MediaMuxerDemoActivity;
 import com.qiyei.android.media.app.ui.activity.MediaPlayActivity;
 import com.qiyei.android.media.app.ui.activity.MediaRecordActivity;
 import com.qiyei.android.media.app.ui.adapter.CommonListAdapter;
@@ -32,9 +33,10 @@ public class MediaFragment extends CommonListFragment<MainMenu> {
     private List<MainMenu> mMenuList = new ArrayList<>();
 
     private String[] names = new String[]{"测试1 相机Camera1使用","测试2 相机Camera2使用",
-            "测试3 音视频的采集、编码、封包成 mp4 输出","测试4 音频播放","测试5 H264 摄像头录制视频编码成mp4文件","测试6 H264 摄像头麦克风录制音视频编码成 mp4文件"};
+            "测试3 音视频的采集、编码、封包成 mp4 输出","测试4 音频播放","测试5 H264 摄像头录制视频编码成mp4文件","测试6 H264 摄像头麦克风录制音视频编码成 mp4文件",
+            "测试7 解析mp4文件再合成mp4文件"};
     private Class<?>[] clazzs = new Class[]{Camera1DemoActivity.class, Camera2DemoActivity.class,
-            MediaRecordActivity.class, MediaPlayActivity.class, H264MediaCodecDemoActivity.class, H264MP4DemoActivity.class};
+            MediaRecordActivity.class, MediaPlayActivity.class, H264MediaCodecDemoActivity.class, H264MP4DemoActivity.class, MediaMuxerDemoActivity.class};
 
 
     public MediaFragment() {
