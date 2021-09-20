@@ -16,6 +16,10 @@ public interface MediaConstant {
 
     int AAC_ENCODER = 2;
 
+    int H264_DECODER = 3;
+
+    int AAC_DECODER = 4;
+
     int VALUE_FRAME_RATE = 30;
 
     int BUFFER_SIZE = 10;
@@ -40,4 +44,21 @@ public interface MediaConstant {
     String MIME_VIDEO_PREFIX = "video";
 
     String MIME_AUDIO_PREFIX = "audio";
+
+    /**
+     * 这个值用于找到第一个帧头后，继续寻找第二个帧头，如果解码失败可以尝试缩小这个值
+     */
+    int FRAME_MIN_LEN = 1024;
+
+    /**
+     * 一般H264帧大小不超过200k,如果解码失败可以尝试增大这个值
+     */
+    int FRAME_MAX_LEN = 300 * 1024;
+
+    /**
+     * 根据帧率获取的解码每帧需要休眠的时间,根据实际帧率进行操作
+     */
+    int PRE_FRAME_TIME = 1000 / VALUE_FRAME_RATE;
+
+    int BUFFER_READ_SIZE = 10 * 1024;
 }
