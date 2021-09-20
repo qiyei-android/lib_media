@@ -58,14 +58,11 @@ public class CustomMediaExtractor {
     }
 
 
-    public int readBuffer(ByteBuffer buffer,boolean video) {
+    public int readBuffer(ByteBuffer buffer) {
         if (buffer == null){
             return -1;
         }
         buffer.clear();
-
-
-        selectTrack(video ? mVideoTrackId : mAudioTrackId);
         //读取当前帧数据
         int bufferCount = mMediaExtractor.readSampleData(buffer,0);
         if (bufferCount < 0){
@@ -75,10 +72,18 @@ public class CustomMediaExtractor {
         //记录当前时间戳及标志位
         mCurSampleTime = mMediaExtractor.getSampleTime();
         mCurSampleFlags = mMediaExtractor.getSampleFlags();
-        Log.i(MediaConstant.H264_TAG,getTag() + "readBuffer mCurSampleTime=" + mCurSampleTime + " mCurSampleFlags=" + mCurSampleFlags);
+        Log.i(MediaConstant.H264_TAG,getTag() + "readBuffer bufferCount = "+ bufferCount + " mCurSampleTime=" + mCurSampleTime + " mCurSampleFlags=" + mCurSampleFlags);
 
         mMediaExtractor.advance();
         return bufferCount;
+    }
+
+    public int getVideoTrackId() {
+        return mVideoTrackId;
+    }
+
+    public int getAudioTrackId() {
+        return mAudioTrackId;
     }
 
     /**
