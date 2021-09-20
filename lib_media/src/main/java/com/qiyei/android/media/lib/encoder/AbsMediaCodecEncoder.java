@@ -1,4 +1,4 @@
-package com.qiyei.android.media.lib.codec;
+package com.qiyei.android.media.lib.encoder;
 
 import android.media.MediaCodec;
 import android.media.MediaCodecInfo;
@@ -6,13 +6,10 @@ import android.media.MediaFormat;
 import android.media.MediaMuxer;
 import android.util.Log;
 
-import com.qiyei.android.media.api.CodecCallBack;
-import com.qiyei.android.media.api.IEncoder;
+import com.qiyei.android.media.api.EncoderCallBack;
 import com.qiyei.android.media.api.MediaConstant;
 
 import java.io.IOException;
-import java.util.ArrayDeque;
-import java.util.LinkedList;
 import java.util.concurrent.ArrayBlockingQueue;
 
 public abstract class AbsMediaCodecEncoder extends AbsEncoder {
@@ -47,7 +44,7 @@ public abstract class AbsMediaCodecEncoder extends AbsEncoder {
     /**
      * 回调
      */
-    protected CodecCallBack mCallBack;
+    protected EncoderCallBack mCallBack;
 
     public AbsMediaCodecEncoder(int width, int height) {
         mYUV420Queue = new ArrayBlockingQueue<byte[]>(MediaConstant.BUFFER_SIZE);
@@ -71,7 +68,7 @@ public abstract class AbsMediaCodecEncoder extends AbsEncoder {
     }
 
     @Override
-    public void setCallBack(CodecCallBack callBack) {
+    public void setCallBack(EncoderCallBack callBack) {
         mCallBack = callBack;
     }
 

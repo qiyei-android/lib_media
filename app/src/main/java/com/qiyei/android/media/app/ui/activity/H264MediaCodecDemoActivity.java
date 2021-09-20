@@ -15,13 +15,10 @@ import com.qiyei.android.media.api.ICamera2Api;
 import com.qiyei.android.media.api.IEncoder;
 import com.qiyei.android.media.api.MediaUtils;
 import com.qiyei.android.media.app.R;
-import com.qiyei.android.media.lib.YUVUtils;
 import com.qiyei.android.media.lib.camera.camera2.Camera2Impl;
-import com.qiyei.android.media.lib.codec.H264MediaCodecAsyncEncoder;
-import com.qiyei.android.media.lib.codec.H264MediaCodecEncoder;
+import com.qiyei.android.media.lib.encoder.H264MediaCodecAsyncEncoder;
 
 import java.io.File;
-import java.nio.ByteBuffer;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Locale;

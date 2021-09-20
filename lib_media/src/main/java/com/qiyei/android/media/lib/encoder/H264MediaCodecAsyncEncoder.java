@@ -1,19 +1,14 @@
-package com.qiyei.android.media.lib.codec;
+package com.qiyei.android.media.lib.encoder;
 
 import android.media.MediaCodec;
-import android.media.MediaCodecInfo;
 import android.media.MediaFormat;
-import android.media.MediaMuxer;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
 
-import com.qiyei.android.media.api.CodecCallBack;
 import com.qiyei.android.media.api.MediaConstant;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.concurrent.ArrayBlockingQueue;
 
 public class H264MediaCodecAsyncEncoder extends AbsMediaCodecEncoder{
 

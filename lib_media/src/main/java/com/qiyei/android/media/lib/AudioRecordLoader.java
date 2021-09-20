@@ -6,8 +6,8 @@ import android.media.AudioRecord;
 
 
 import com.qiyei.android.media.api.MediaConstant;
-import com.qiyei.android.media.lib.codec.AACMediaCodecEncoder;
-import com.qiyei.android.media.lib.codec.Mp4MediaCodecRecord;
+import com.qiyei.android.media.lib.encoder.AACMediaCodecEncoder;
+import com.qiyei.android.media.lib.encoder.Mp4MediaEncoderRecord;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -60,7 +60,7 @@ public class AudioRecordLoader {
         mAudioRecord = null;
     }
 
-    public void setCallback(Mp4MediaCodecRecord mp4MediaCodecRecord) {
+    public void setCallback(Mp4MediaEncoderRecord mp4MediaCodecRecord) {
         mAACMediaCodecEncoder.setCallBack(mp4MediaCodecRecord);
     }
 }

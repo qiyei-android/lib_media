@@ -5,7 +5,7 @@ import android.media.MediaFormat;
 
 import java.nio.ByteBuffer;
 
-public interface CodecCallBack {
+public interface EncoderCallBack {
     void outputMediaFormatChanged(int type, MediaFormat mediaFormat);
 
     void onEncodeOutput(int type, ByteBuffer byteBuffer, MediaCodec.BufferInfo bufferInfo);

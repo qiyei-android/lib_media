@@ -17,8 +17,7 @@ import com.qiyei.android.media.api.MediaConstant;
 import com.qiyei.android.media.api.MediaUtils;
 import com.qiyei.android.media.app.R;
 import com.qiyei.android.media.lib.camera.camera2.Camera2Impl;
-import com.qiyei.android.media.lib.codec.H264MediaCodecAsyncEncoder;
-import com.qiyei.android.media.lib.codec.Mp4MediaCodecRecord;
+import com.qiyei.android.media.lib.encoder.Mp4MediaEncoderRecord;
 
 import java.io.File;
 import java.text.DateFormat;
@@ -107,7 +106,7 @@ public class H264MP4DemoActivity extends AppCompatActivity {
     private void startMediaCodec(Image image){
         DateFormat dateFormat = new SimpleDateFormat("yyyyMMddHHmmssSSS", Locale.getDefault());
         if (mCodecEncoder == null){
-            mCodecEncoder = new Mp4MediaCodecRecord(image.getWidth(),image.getHeight(), MediaConstant.DEFAULT_SAMPLE_RATE_IN_HZ,MediaConstant.DEFAULT_CHANNEL_CONFIG,MediaUtils.getMediaStorePath() + File.separator + "mp4demo_" + dateFormat.format(System.currentTimeMillis()) + ".mp4");
+            mCodecEncoder = new Mp4MediaEncoderRecord(image.getWidth(),image.getHeight(), MediaConstant.DEFAULT_SAMPLE_RATE_IN_HZ,MediaConstant.DEFAULT_CHANNEL_CONFIG,MediaUtils.getMediaStorePath() + File.separator + "mp4demo_" + dateFormat.format(System.currentTimeMillis()) + ".mp4");
             //mCodecEncoder.setOutputPath();
             mCodecEncoder.start();
         }

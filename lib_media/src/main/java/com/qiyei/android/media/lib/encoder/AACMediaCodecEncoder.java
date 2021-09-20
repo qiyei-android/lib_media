@@ -1,4 +1,4 @@
-package com.qiyei.android.media.lib.codec;
+package com.qiyei.android.media.lib.encoder;
 
 import android.media.AudioFormat;
 import android.media.AudioRecord;
@@ -7,7 +7,7 @@ import android.media.MediaFormat;
 import android.text.TextUtils;
 import android.util.Log;
 
-import com.qiyei.android.media.api.CodecCallBack;
+import com.qiyei.android.media.api.EncoderCallBack;
 import com.qiyei.android.media.api.MediaConstant;
 
 import java.io.BufferedOutputStream;
@@ -40,7 +40,7 @@ public class AACMediaCodecEncoder extends AbsEncoder {
     /**
      * 回调
      */
-    private volatile CodecCallBack mCallBack;
+    private volatile EncoderCallBack mCallBack;
 
 
     public AACMediaCodecEncoder(int sampleRateInHz, int channelConfig) {
@@ -62,7 +62,7 @@ public class AACMediaCodecEncoder extends AbsEncoder {
     }
 
     @Override
-    public void setCallBack(CodecCallBack callBack) {
+    public void setCallBack(EncoderCallBack callBack) {
         mCallBack = callBack;
     }
 

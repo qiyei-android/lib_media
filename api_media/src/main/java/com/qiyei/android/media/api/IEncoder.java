@@ -4,7 +4,7 @@ package com.qiyei.android.media.api;
 
 public interface IEncoder {
 
-    void setCallBack(CodecCallBack callBack);
+    void setCallBack(EncoderCallBack callBack);
 
     void setOutputPath(String outputPath);
 

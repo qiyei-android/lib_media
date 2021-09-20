@@ -1,4 +1,4 @@
-package com.qiyei.android.media.lib.codec;
+package com.qiyei.android.media.lib.encoder;
 
 import com.qiyei.android.media.api.IEncoder;
 

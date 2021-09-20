@@ -1,4 +1,4 @@
-package com.qiyei.android.media.lib.codec;
+package com.qiyei.android.media.lib.encoder;
 
 import android.media.AudioRecord;
 import android.media.MediaCodec;
@@ -8,7 +8,7 @@ import android.media.MediaRecorder;
 import android.util.Log;
 
 
-import com.qiyei.android.media.api.CodecCallBack;
+import com.qiyei.android.media.api.EncoderCallBack;
 import com.qiyei.android.media.api.IEncoder;
 import com.qiyei.android.media.api.MediaConstant;
 import com.qiyei.android.media.lib.AudioRecordLoader;
@@ -16,7 +16,7 @@ import com.qiyei.android.media.lib.AudioRecordLoader;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-public class Mp4MediaCodecRecord implements IEncoder,CodecCallBack {
+public class Mp4MediaEncoderRecord implements IEncoder, EncoderCallBack {
 
     private final Object mLock;
 
@@ -33,10 +33,10 @@ public class Mp4MediaCodecRecord implements IEncoder,CodecCallBack {
     private int mVideoTrackIndex = -1;
     private int mAudioTrackIndex = -1;
 
-    private CodecCallBack mCallBack;
+    private EncoderCallBack mCallBack;
 
 
-    public Mp4MediaCodecRecord(int width, int height, int sampleRateInHz, int channelConfig,String outputPath) {
+    public Mp4MediaEncoderRecord(int width, int height, int sampleRateInHz, int channelConfig, String outputPath) {
         mH264MediaCodecEncoder = new H264MediaCodecEncoder(width, height);
         mAACMediaCodecEncoder = new AudioRecordLoader(MediaRecorder.AudioSource.MIC, sampleRateInHz,
                 channelConfig, MediaConstant.DEFAULT_ENCODING,
@@ -111,7 +111,7 @@ public class Mp4MediaCodecRecord implements IEncoder,CodecCallBack {
     }
 
     @Override
-    public void setCallBack(CodecCallBack callBack) {
+    public void setCallBack(EncoderCallBack callBack) {
         mCallBack = callBack;
     }
 
