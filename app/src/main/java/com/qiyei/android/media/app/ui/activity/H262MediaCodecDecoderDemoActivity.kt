@@ -5,10 +5,12 @@ import android.media.MediaCodec
 import android.media.MediaFormat
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.util.Log
 import android.view.Surface
 import android.view.TextureView
 import com.qiyei.android.media.api.DecoderCallBack
 import com.qiyei.android.media.api.IDecoder
+import com.qiyei.android.media.api.MediaConstant
 import com.qiyei.android.media.api.MediaUtils
 import com.qiyei.android.media.app.R
 import com.qiyei.android.media.app.extend.onClick
@@ -43,12 +45,11 @@ class H262MediaCodecDecoderDemoActivity : AppCompatActivity() {
 
                     }
 
-                    override fun onDecodeOutput(
-                        type: Int,
-                        byteBuffer: ByteBuffer?,
-                        bufferInfo: MediaCodec.BufferInfo?
-                    ) {
-
+                    override fun onDecodeOutput(type: Int, byteBuffer: ByteBuffer?, bufferInfo: MediaCodec.BufferInfo?) {
+                        if (byteBuffer != null) {
+                            Log.i(MediaConstant.H264_TAG,"H262MediaCodecDecoderDemoActivity onDecodeOutput,byteBuffer,size=" +
+                                    byteBuffer.remaining() + " bufferInfo=" + bufferInfo)
+                        }
                     }
 
                     override fun onStop(type: Int) {
