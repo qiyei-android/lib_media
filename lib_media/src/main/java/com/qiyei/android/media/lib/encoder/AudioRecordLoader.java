@@ -1,4 +1,4 @@
-package com.qiyei.android.media.lib;
+package com.qiyei.android.media.lib.encoder;
 
 
 

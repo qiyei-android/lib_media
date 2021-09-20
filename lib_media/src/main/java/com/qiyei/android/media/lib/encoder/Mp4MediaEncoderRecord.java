@@ -11,7 +11,6 @@ import android.util.Log;
 import com.qiyei.android.media.api.EncoderCallBack;
 import com.qiyei.android.media.api.IEncoder;
 import com.qiyei.android.media.api.MediaConstant;
-import com.qiyei.android.media.lib.AudioRecordLoader;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
