@@ -2,3 +2,4 @@ println "初始化开始"
 include ':app'
 include ':api_media'
 include ':lib_media'
+include ':lib_ffmpeg'
