@@ -12,19 +12,19 @@ public interface MediaConstant {
     String MIME_TYPE_AUDIO_AAC = MediaFormat.MIMETYPE_AUDIO_AAC;
 
 
-    int H264_ENCODER = 1;
+    int VIDEO_H264_ENCODER = 1;
 
-    int AAC_ENCODER = 2;
+    int AUDIO_AAC_ENCODER = 2;
 
-    int H264_DECODER = 3;
+    int VIDEO_H264_DECODER = 3;
 
-    int AAC_DECODER = 4;
+    int AUDIO_AAC_DECODER = 4;
 
     int VALUE_FRAME_RATE = 30;
 
     int BUFFER_SIZE = 10;
 
-    int TIME_OUT = 10000;
+    int TIME_OUT_US = 10000;
 
     /**
      * 默认采样频率
@@ -60,5 +60,5 @@ public interface MediaConstant {
      */
     int PRE_FRAME_TIME = 1000 / VALUE_FRAME_RATE;
 
-    int BUFFER_READ_SIZE = 10 * 1024;
+    int BUFFER_READ_SIZE = 200 * 1024;
 }

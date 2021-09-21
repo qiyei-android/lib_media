@@ -110,7 +110,7 @@ public class AACMediaCodecEncoder extends AbsEncoder {
                     }
                     if (input != null){
                         try {
-                            int inputBufferIndex = mMediaCodec.dequeueInputBuffer(MediaConstant.TIME_OUT);
+                            int inputBufferIndex = mMediaCodec.dequeueInputBuffer(MediaConstant.TIME_OUT_US);
                             if (inputBufferIndex >= 0) {
 
                                 ByteBuffer inputBuffer = null;
@@ -127,12 +127,12 @@ public class AACMediaCodecEncoder extends AbsEncoder {
 
                             MediaCodec.BufferInfo bufferInfo = new MediaCodec.BufferInfo();
 
-                            int outputBufferIndex = mMediaCodec.dequeueOutputBuffer(bufferInfo,MediaConstant.TIME_OUT);
+                            int outputBufferIndex = mMediaCodec.dequeueOutputBuffer(bufferInfo,MediaConstant.TIME_OUT_US);
                             Log.i(MediaConstant.H264_TAG,getTag() + "outputBufferIndex=" + outputBufferIndex);
                             if (outputBufferIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED){
                                 MediaFormat newFormat = mMediaCodec.getOutputFormat();
                                 if (mCallBack != null){
-                                    mCallBack.outputMediaFormatChanged(MediaConstant.AAC_ENCODER,newFormat);
+                                    mCallBack.outputMediaFormatChanged(MediaConstant.AUDIO_AAC_ENCODER,newFormat);
                                 }
                             }
 
@@ -156,7 +156,7 @@ public class AACMediaCodecEncoder extends AbsEncoder {
                                     bufferInfo.presentationTimeUs = getPTSUs();
 
                                     if (mCallBack != null){
-                                        mCallBack.onEncodeOutput(MediaConstant.AAC_ENCODER,outputBuffer,bufferInfo);
+                                        mCallBack.onEncodeOutput(MediaConstant.AUDIO_AAC_ENCODER,outputBuffer,bufferInfo);
                                     }
 
                                     prevOutputPTSUs = bufferInfo.presentationTimeUs;
@@ -175,7 +175,7 @@ public class AACMediaCodecEncoder extends AbsEncoder {
 
                                 mMediaCodec.releaseOutputBuffer(outputBufferIndex,false);
                                 bufferInfo = new MediaCodec.BufferInfo();
-                                outputBufferIndex = mMediaCodec.dequeueOutputBuffer(bufferInfo,MediaConstant.TIME_OUT);
+                                outputBufferIndex = mMediaCodec.dequeueOutputBuffer(bufferInfo,MediaConstant.TIME_OUT_US);
                                 Log.i(MediaConstant.H264_TAG,getTag() + "release after outputBufferIndex=" + outputBufferIndex);
                             }
                         } catch (RuntimeException e) {
@@ -207,7 +207,7 @@ public class AACMediaCodecEncoder extends AbsEncoder {
     public void stop() {
         if (mCallBack != null) {
             //回调
-            mCallBack.onStop(MediaConstant.AAC_ENCODER);
+            mCallBack.onStop(MediaConstant.AUDIO_AAC_ENCODER);
         }
         isRunning = false;
         try {

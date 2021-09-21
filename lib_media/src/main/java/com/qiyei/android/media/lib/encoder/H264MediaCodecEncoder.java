@@ -30,7 +30,7 @@ public class H264MediaCodecEncoder extends AbsMediaCodecEncoder{
                     }
                     try {
                         if (input != null){
-                            int inputBufferIndex = mMediaCodec.dequeueInputBuffer(MediaConstant.TIME_OUT);
+                            int inputBufferIndex = mMediaCodec.dequeueInputBuffer(MediaConstant.TIME_OUT_US);
                             Log.i(MediaConstant.H264_TAG,getTag() + "run inputBufferIndex=" + inputBufferIndex);
                             if (inputBufferIndex >= 0){
                                 ByteBuffer inputBuffer = mMediaCodec.getInputBuffer(inputBufferIndex);
@@ -41,12 +41,12 @@ public class H264MediaCodecEncoder extends AbsMediaCodecEncoder{
 
                             MediaCodec.BufferInfo bufferInfo = new MediaCodec.BufferInfo();
 
-                            int outputBufferIndex = mMediaCodec.dequeueOutputBuffer(bufferInfo,MediaConstant.TIME_OUT);
+                            int outputBufferIndex = mMediaCodec.dequeueOutputBuffer(bufferInfo,MediaConstant.TIME_OUT_US);
                             Log.i(MediaConstant.H264_TAG,getTag() + "run outputBufferIndex=" + outputBufferIndex);
                             if (outputBufferIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED){
                                 MediaFormat newFormat = mMediaCodec.getOutputFormat();
                                 if (mCallBack != null){
-                                    mCallBack.outputMediaFormatChanged(MediaConstant.H264_ENCODER,newFormat);
+                                    mCallBack.outputMediaFormatChanged(MediaConstant.VIDEO_H264_ENCODER,newFormat);
                                 }
                                 if (mMediaMuxer != null){
                                     if (isMuxerStart){
@@ -77,7 +77,7 @@ public class H264MediaCodecEncoder extends AbsMediaCodecEncoder{
                                     bufferInfo.presentationTimeUs = getPTSUs();
 
                                     if (mCallBack != null){
-                                        mCallBack.onEncodeOutput(MediaConstant.H264_ENCODER,outputBuffer,bufferInfo);
+                                        mCallBack.onEncodeOutput(MediaConstant.VIDEO_H264_ENCODER,outputBuffer,bufferInfo);
                                     }
 
                                     prevOutputPTSUs = bufferInfo.presentationTimeUs;
@@ -92,7 +92,7 @@ public class H264MediaCodecEncoder extends AbsMediaCodecEncoder{
 
                                 mMediaCodec.releaseOutputBuffer(outputBufferIndex,false);
                                 bufferInfo = new MediaCodec.BufferInfo();
-                                outputBufferIndex = mMediaCodec.dequeueOutputBuffer(bufferInfo,MediaConstant.TIME_OUT);
+                                outputBufferIndex = mMediaCodec.dequeueOutputBuffer(bufferInfo,MediaConstant.TIME_OUT_US);
                                 Log.i(MediaConstant.H264_TAG,getTag() + "run release after outputBufferIndex=" + outputBufferIndex);
                             }
 
@@ -115,7 +115,7 @@ public class H264MediaCodecEncoder extends AbsMediaCodecEncoder{
     public void stop(){
         Log.i(MediaConstant.H264_TAG,getTag() + "stop");
         if (mCallBack != null){
-            mCallBack.onStop(MediaConstant.H264_ENCODER);
+            mCallBack.onStop(MediaConstant.VIDEO_H264_ENCODER);
         }
 
         isRunning = false;

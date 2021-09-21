@@ -9,25 +9,21 @@ import android.util.Log
 import android.view.Surface
 import android.view.TextureView
 import com.qiyei.android.media.api.DecoderCallBack
-import com.qiyei.android.media.api.IDecoder
 import com.qiyei.android.media.api.MediaConstant
 import com.qiyei.android.media.api.MediaUtils
 import com.qiyei.android.media.app.R
 import com.qiyei.android.media.app.extend.onClick
-import com.qiyei.android.media.lib.decoder.CustomMediaMuxer
-import com.qiyei.android.media.lib.decoder.H264MediaCodecDecoder
+import com.qiyei.android.media.lib.decoder.H264VideoMediaCodecDecoder
 import kotlinx.android.synthetic.main.activity_h262_media_codec_decoder_demo.*
 import java.io.File
 import java.io.IOException
 import java.nio.ByteBuffer
-import java.text.DateFormat
-import java.text.SimpleDateFormat
 import java.util.*
 
 class H262MediaCodecDecoderDemoActivity : AppCompatActivity() {
 
 
-    lateinit var mH264MediaCodecDecoder:H264MediaCodecDecoder
+    lateinit var mH264MediaCodecDecoder:H264VideoMediaCodecDecoder
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -35,9 +31,8 @@ class H262MediaCodecDecoderDemoActivity : AppCompatActivity() {
 
         decoder_preview.surfaceTextureListener = object : TextureView.SurfaceTextureListener{
             override fun onSurfaceTextureAvailable(surface: SurfaceTexture, width: Int, height: Int) {
-                mH264MediaCodecDecoder = H264MediaCodecDecoder(Surface(surface),width,height)
                 getMediaFile()?.let {
-                    mH264MediaCodecDecoder.setInputPath(it)
+                    mH264MediaCodecDecoder = H264VideoMediaCodecDecoder(Surface(surface),width,height,it)
                 }
 
                 mH264MediaCodecDecoder.setCallBack(object :DecoderCallBack{

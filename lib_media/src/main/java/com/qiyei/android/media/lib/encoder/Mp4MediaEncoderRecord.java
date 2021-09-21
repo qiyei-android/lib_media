@@ -58,10 +58,10 @@ public class Mp4MediaEncoderRecord implements IEncoder, EncoderCallBack {
                 if (mHasStartMuxer) {
                     return;
                 }
-                if (type == MediaConstant.H264_ENCODER) {
+                if (type == MediaConstant.VIDEO_H264_ENCODER) {
                     mVideoTrackIndex = mMediaMuxer.addTrack(mediaFormat);
                 }
-                if (type == MediaConstant.AAC_ENCODER) {
+                if (type == MediaConstant.AUDIO_AAC_ENCODER) {
                     mAudioTrackIndex = mMediaMuxer.addTrack(mediaFormat);
                 }
                 Log.i(MediaConstant.H264_TAG,getTag() + "outputMediaFormatChanged mVideoTrackIndex=" + mVideoTrackIndex + " mAudioTrackIndex=" + mAudioTrackIndex);
@@ -83,10 +83,10 @@ public class Mp4MediaEncoderRecord implements IEncoder, EncoderCallBack {
     public void onEncodeOutput(int type, ByteBuffer byteBuffer, MediaCodec.BufferInfo bufferInfo) {
         synchronized (mLock) {
             //write data
-            if (type == MediaConstant.H264_ENCODER && mVideoTrackIndex != -1) {
+            if (type == MediaConstant.VIDEO_H264_ENCODER && mVideoTrackIndex != -1) {
                 mMediaMuxer.writeSampleData(mVideoTrackIndex, byteBuffer, bufferInfo);
             }
-            if (type == MediaConstant.AAC_ENCODER && mAudioTrackIndex != -1) {
+            if (type == MediaConstant.AUDIO_AAC_ENCODER && mAudioTrackIndex != -1) {
                 mMediaMuxer.writeSampleData(mAudioTrackIndex, byteBuffer, bufferInfo);
             }
         }
@@ -95,10 +95,10 @@ public class Mp4MediaEncoderRecord implements IEncoder, EncoderCallBack {
     @Override
     public void onStop(int type) {
         synchronized (mLock) {
-            if (type == MediaConstant.H264_ENCODER) {
+            if (type == MediaConstant.VIDEO_H264_ENCODER) {
                 mHasStopVideo = true;
             }
-            if (type == MediaConstant.AAC_ENCODER) {
+            if (type == MediaConstant.AUDIO_AAC_ENCODER) {
                 mHasStopAudio = true;
             }
             Log.i(MediaConstant.H264_TAG,getTag() + "onStop mHasStopAudio=" + mHasStopAudio + " mHasStopVideo=" + mHasStopVideo + " mHasStartMuxer=" + mHasStartMuxer);

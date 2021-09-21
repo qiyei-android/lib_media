@@ -4,6 +4,7 @@ import android.media.MediaCodec;
 import android.media.MediaFormat;
 import android.media.MediaMuxer;
 
+import com.qiyei.android.media.api.MediaConstant;
 import com.qiyei.android.media.api.MediaMuxerListener;
 
 import java.io.IOException;
@@ -61,7 +62,7 @@ public class CustomMediaMuxer {
                     mMediaMuxer.start();
 
                     //尽量大一些
-                    ByteBuffer buffer = ByteBuffer.allocate(200 * 1024);
+                    ByteBuffer buffer = ByteBuffer.allocate(MediaConstant.BUFFER_READ_SIZE);
                     MediaCodec.BufferInfo info = new MediaCodec.BufferInfo();
 
                     int size = 0;
