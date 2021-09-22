@@ -76,6 +76,7 @@ public abstract class MediaCodecDecoder implements IDecoder {
         mMediaCodec.start();
         isFinish = false;
         Log.i(MediaConstant.H264_TAG,getTag() + "start");
+        long startMs = System.currentTimeMillis();
         Executors.newFixedThreadPool(1).submit(new Runnable() {
             @Override
             public void run() {
@@ -121,12 +122,20 @@ public abstract class MediaCodecDecoder implements IDecoder {
                             mCallBack.onDecodeOutput(getDecoderType(),output,bufferInfo);
                         }
                         handlerFrameOutput(output,bufferInfo);
-
+                        while (bufferInfo.presentationTimeUs / 1000 > System.currentTimeMillis() - startMs) {
+                            try {
+                                Thread.sleep(10);
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                                break;
+                            }
+                        }
                         if (getDecoderType() == MediaConstant.VIDEO_H264_DECODER){
                             mMediaCodec.releaseOutputBuffer(outputBufferIndex, true);
                         } else {
                             mMediaCodec.releaseOutputBuffer(outputBufferIndex, false);
                         }
+
                     }
                     Log.i(MediaConstant.H264_TAG, getTag() + " releaseOutputBuffer outputBufferIndex= " + outputBufferIndex + " isFinish =" + isFinish);
                 }
