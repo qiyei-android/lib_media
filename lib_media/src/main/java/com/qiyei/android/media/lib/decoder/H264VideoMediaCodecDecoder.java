@@ -5,6 +5,8 @@ import android.view.Surface;
 
 import com.qiyei.android.media.api.MediaConstant;
 
+import java.nio.ByteBuffer;
+
 public class H264VideoMediaCodecDecoder extends MediaCodecDecoder {
 
     /**
@@ -48,4 +50,8 @@ public class H264VideoMediaCodecDecoder extends MediaCodecDecoder {
         return MediaConstant.VIDEO_H264_DECODER;
     }
 
+    @Override
+    protected void handlerFrameOutput(ByteBuffer byteBuffer, MediaCodec.BufferInfo bufferInfo) {
+
+    }
 }

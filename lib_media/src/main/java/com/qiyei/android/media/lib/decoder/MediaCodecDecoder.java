@@ -56,8 +56,6 @@ public abstract class MediaCodecDecoder implements IDecoder {
             mMediaExtractor.selectTrack(mType == MediaConstant.VIDEO_H264_DECODER ? mMediaExtractor.getVideoTrackId() : mMediaExtractor.getAudioTrackId());
             //根据需要解码的类型创建解码器
             mMediaCodec = MediaCodec.createDecoderByType(mMediaFormat.getString(MediaFormat.KEY_MIME));
-            //配置MediaCodec
-            configure(mMediaCodec);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -73,25 +71,69 @@ public abstract class MediaCodecDecoder implements IDecoder {
 
     @Override
     public void start() {
+        //配置MediaCodec
+        configure(mMediaCodec);
         mMediaCodec.start();
         isFinish = false;
         Log.i(MediaConstant.H264_TAG,getTag() + "start");
         Executors.newFixedThreadPool(1).submit(new Runnable() {
             @Override
             public void run() {
+                boolean isEOS = false;
                 while (!isFinish) {
-                    ByteBuffer buffer = ByteBuffer.allocate(MediaConstant.BUFFER_READ_SIZE);
-                    int size = mMediaExtractor.readBuffer(buffer);
-                    Log.i(MediaConstant.H264_TAG,getTag() + "run MediaExtractor.readBuffer=" + size );
-                    onFrameDecoder(buffer.array(),0,size,mMediaExtractor.getCurSampleTime(),mMediaExtractor.getCurSampleFlags());
+                    if (!isEOS){
+                        //获取输入buffer index -1表示一直等待；0表示不等待；其他大于0的参数表示等待毫秒数
+                        int inputBufferIndex = mMediaCodec.dequeueInputBuffer(MediaConstant.TIME_OUT_US);
+                        if (inputBufferIndex >= 0) {
+                            ByteBuffer inputBuffer = mMediaCodec.getInputBuffer(inputBufferIndex);
+                            //清空buffer
+                            inputBuffer.clear();
+                            int length = mMediaExtractor.readBuffer(inputBuffer);
+                            if (length >= 0){
+                                //解码
+                                mMediaCodec.queueInputBuffer(inputBufferIndex, 0, length, mMediaExtractor.getCurSampleTime(), 0);
+                                Log.i(MediaConstant.H264_TAG,getTag() + "run inputBufferIndex=" + inputBufferIndex + " length=" + length);
+                            } else {
+                                //结束
+                                mMediaCodec.queueInputBuffer(inputBufferIndex, 0, 0, 0,
+                                        MediaCodec.BUFFER_FLAG_END_OF_STREAM);
+                                Log.i(MediaConstant.H264_TAG,getTag() + "run inputBufferIndex=" + inputBufferIndex + " end");
+                                isEOS = true;
+                            }
+                        }
+                    }
+
+                    // 获取输出buffer index
+                    MediaCodec.BufferInfo bufferInfo = new MediaCodec.BufferInfo();
+                    int outputBufferIndex = mMediaCodec.dequeueOutputBuffer(bufferInfo, MediaConstant.TIME_OUT_US);
+                    if (outputBufferIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED){
+                        MediaFormat newFormat = mMediaCodec.getOutputFormat();
+                        if (mCallBack != null){
+                            mCallBack.outputMediaFormatChanged(getDecoderType(),newFormat);
+                        }
+                    } else if (outputBufferIndex >= 0){
+                        if ((bufferInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
+                            Log.i(MediaConstant.H264_TAG, getTag() + " finish,OutputBuffer BUFFER_FLAG_END_OF_STREAM");
+                            isFinish = true;
+                        }
+                        ByteBuffer output = mMediaCodec.getOutputBuffer(outputBufferIndex);
+                        if (mCallBack != null){
+                            mCallBack.onDecodeOutput(getDecoderType(),output,bufferInfo);
+                        }
+                        handlerFrameOutput(output,bufferInfo);
+
+                        if (getDecoderType() == MediaConstant.VIDEO_H264_DECODER){
+                            mMediaCodec.releaseOutputBuffer(outputBufferIndex, true);
+                        } else {
+                            mMediaCodec.releaseOutputBuffer(outputBufferIndex, false);
+                        }
+                    }
+                    Log.i(MediaConstant.H264_TAG, getTag() + " releaseOutputBuffer outputBufferIndex= " + outputBufferIndex + " isFinish =" + isFinish);
                 }
             }
         });
 
     }
-
-
-
 
     @Override
     public void stop() {
@@ -111,80 +153,5 @@ public abstract class MediaCodecDecoder implements IDecoder {
 
     protected abstract int getDecoderType();
 
-    protected void onFrameDecoder(byte[] buf, int offset, int length,long presentationTimeUs, int flags) {
-        //获取输入buffer index -1表示一直等待；0表示不等待；其他大于0的参数表示等待毫秒数
-        int inputBufferIndex = mMediaCodec.dequeueInputBuffer(MediaConstant.TIME_OUT_US);
-        if (inputBufferIndex >= 0) {
-            ByteBuffer inputBuffer = mMediaCodec.getInputBuffer(inputBufferIndex);
-            //清空buffer
-            inputBuffer.clear();
-            if (length >= 0){
-                //put需要解码的数据
-                inputBuffer.put(buf, offset, length);
-                //解码
-                mMediaCodec.queueInputBuffer(inputBufferIndex, offset, length, presentationTimeUs, flags);
-                Log.i(MediaConstant.H264_TAG,getTag() + "run inputBufferIndex=" + inputBufferIndex + " length=" + length);
-            } else {
-                //结束
-                mMediaCodec.queueInputBuffer(inputBufferIndex, 0, 0, 0,
-                        MediaCodec.BUFFER_FLAG_END_OF_STREAM);
-                Log.i(MediaConstant.H264_TAG,getTag() + "run inputBufferIndex=" + inputBufferIndex + " end");
-            }
-        }
-
-        // 获取输出buffer index
-        MediaCodec.BufferInfo bufferInfo = new MediaCodec.BufferInfo();
-        int outputBufferIndex = mMediaCodec.dequeueOutputBuffer(bufferInfo, MediaConstant.TIME_OUT_US);
-//        if (outputBufferIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED){
-//            MediaFormat newFormat = mMediaCodec.getOutputFormat();
-//            if (mCallBack != null){
-//                mCallBack.outputMediaFormatChanged(MediaConstant.VIDEO_H264_ENCODER,newFormat);
-//            }
-//        }
-
-        // 在所有解码后的帧都被渲染后，就可以停止播放了
-        if ((bufferInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
-            Log.i(MediaConstant.H264_TAG, getTag() + " finish 1,OutputBuffer BUFFER_FLAG_END_OF_STREAM");
-            isFinish = true;
-        }
-
-        if (getDecoderType() == MediaConstant.VIDEO_H264_DECODER){
-            mMediaCodec.releaseOutputBuffer(outputBufferIndex, true);
-        } else {
-            mMediaCodec.releaseOutputBuffer(outputBufferIndex, false);
-        }
-
-//        //循环解码，直到数据全部解码完成
-//        while (outputBufferIndex >= 0) {
-//            ByteBuffer outputBuffer = mMediaCodec.getOutputBuffer(outputBufferIndex);
-//            //解码配置
-//            if (bufferInfo.flags == MediaCodec.BUFFER_FLAG_CODEC_CONFIG){
-//                bufferInfo.size = 0;
-//            }
-//
-//            if ((bufferInfo.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
-//                Log.i(MediaConstant.H264_TAG, getTag() + " finish 2,OutputBuffer BUFFER_FLAG_END_OF_STREAM");
-//                isFinish = true;
-//            }
-//
-//            if (bufferInfo.size > 0){
-//                // adjust the ByteBuffer values to match BufferInfo (not needed?)
-//                outputBuffer.position(bufferInfo.offset);
-//                outputBuffer.limit(bufferInfo.offset + bufferInfo.size);
-//                // write encoded data to muxer(need to adjust presentationTimeUs.
-//
-//                if (mCallBack != null){
-//                    mCallBack.onDecodeOutput(MediaConstant.VIDEO_H264_DECODER,outputBuffer,bufferInfo);
-//                }
-//            }
-//
-//            if (getDecoderType() == MediaConstant.VIDEO_H264_DECODER){
-//                mMediaCodec.releaseOutputBuffer(outputBufferIndex, true);
-//            } else {
-//                mMediaCodec.releaseOutputBuffer(outputBufferIndex, false);
-//            }
-//            outputBufferIndex = mMediaCodec.dequeueOutputBuffer(bufferInfo, MediaConstant.TIME_OUT_US);
-//        }
-
-    }
+    protected abstract void handlerFrameOutput(ByteBuffer byteBuffer, MediaCodec.BufferInfo bufferInfo);
 }
