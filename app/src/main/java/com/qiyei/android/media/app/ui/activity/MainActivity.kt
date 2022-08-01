@@ -18,5 +18,6 @@ class MainActivity : AppCompatActivity() {
         fragmentTransaction.add(R.id.content_layout, fragment)
         // 一定要commit
         fragmentTransaction.commit()
+
     }
 }
