@@ -2,7 +2,9 @@ package com.qiyei.android.media.app.camera
 
 import android.view.SurfaceHolder
 
-
+/**
+ * CameraLoader
+ */
 abstract class CameraLoader {
 
     protected var onPreviewFrame: ((data: ByteArray, width: Int, height: Int) -> Unit)? = null
