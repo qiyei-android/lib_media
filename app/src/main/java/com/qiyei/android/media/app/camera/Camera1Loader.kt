@@ -8,6 +8,9 @@ import android.util.Log
 import android.view.Surface
 import android.view.SurfaceHolder
 
+/**
+ * cameral loader
+ */
 class Camera1Loader(private val activity: Activity) : CameraLoader() {
 
     private var cameraInstance: Camera? = null
