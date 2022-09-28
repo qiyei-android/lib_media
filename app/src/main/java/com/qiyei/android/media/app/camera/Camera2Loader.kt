@@ -14,6 +14,9 @@ import android.view.SurfaceHolder
 import androidx.annotation.RequiresApi
 import com.qiyei.android.media.app.ext.generateNV21Data
 
+/**
+ * camera2 loader
+ */
 @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
 class Camera2Loader(private val activity: Activity) : CameraLoader() {
 
