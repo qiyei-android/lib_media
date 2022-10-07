@@ -2,7 +2,9 @@ package com.qiyei.android.media.app.ext
 
 import android.view.View
 import androidx.core.view.ViewCompat
-
+/**
+ * View extend
+ */
 inline fun View.doOnLayout(crossinline action: (view: View) -> Unit) {
     if (ViewCompat.isLaidOut(this) && !isLayoutRequested) {
         action(this)
