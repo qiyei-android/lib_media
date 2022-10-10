@@ -20,6 +20,9 @@ import java.io.IOException
 import java.nio.ByteBuffer
 import java.util.*
 
+/**
+ * H264 Decoder Demo
+ */
 class H262MediaCodecDecoderDemoActivity : AppCompatActivity() {
 
 
