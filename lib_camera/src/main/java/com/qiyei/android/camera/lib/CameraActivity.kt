@@ -8,4 +8,8 @@ class CameraActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_camera)
     }
+
+    override fun onDestroy() {
+        super.onDestroy()
+    }
 }
